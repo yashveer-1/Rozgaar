@@ -24,6 +24,13 @@ app.use((req, res) => res.status(404).json({ message: `Route ${req.method} ${req
 app.use((error, _req, res, _next) => {
   console.error(error);
   if (error.code === 11000) return res.status(409).json({ message: 'Record already exists' });
+  if (error.name === 'ValidationError') {
+    const message = Object.values(error.errors)[0]?.message || 'Invalid request';
+    return res.status(400).json({ message });
+  }
+  if (error.name === 'MongooseServerSelectionError' || /connection|buffering/i.test(error.message)) {
+    return res.status(503).json({ message: 'Database is temporarily unavailable' });
+  }
   return res.status(error.status || 500).json({ message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : error.message });
 });
 

@@ -12,6 +12,11 @@ npm run dev
 
 The worker portal runs at `http://localhost:5173` and the API at `http://localhost:5000`.
 
+Before starting, open `server/.env` and replace `<db_password>` in `MONGODB_URI`
+with the password for the `ys748477_db_user` MongoDB Atlas user. If the password
+contains reserved URL characters such as `@`, `:`, `/`, or `#`, URL-encode it.
+Also replace both JWT secret placeholders with long, random values.
+
 ## Architecture
 
 - `client` — React 19, Vite, Tailwind CSS, React Query, Framer Motion and Recharts
