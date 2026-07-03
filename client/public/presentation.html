@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shramik Lens - Project Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.07);
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #5e5ce6;
+      --accent-grad: linear-gradient(135deg, #5e5ce6 0%, #a25ddc 100%);
+      --success: #0e8a67;
+      --danger: #ff453a;
+      --warning: #f5a623;
+      --font-title: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Main shell */
+    .presentation-container {
+      flex: 1;
+      display: flex;
+      position: relative;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Slide container */
+    .slide-wrapper {
+      width: 90%;
+      max-width: 1200px;
+      height: 80%;
+      max-height: 700px;
+      position: relative;
+      perspective: 1000px;
+    }
+
+    /* Individual slide */
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      transform: scale(0.95) rotateY(10deg);
+      pointer-events: none;
+      transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: scale(1) rotateY(0deg);
+      pointer-events: auto;
+      z-index: 10;
+    }
+
+    .slide.prev {
+      opacity: 0;
+      transform: scale(0.95) rotateY(-10deg);
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .slide-header h2 {
+      font-family: var(--font-title);
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    .slide-header .slide-number {
+      font-family: var(--font-title);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 12px;
+      border-radius: 12px;
+    }
+
+    /* Slide Content */
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    /* Slide Footer */
+    .slide-footer {
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    /* Typography & Utilities */
+    h1 {
+      font-family: var(--font-title);
+      font-size: 4rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+    
+    .gradient-text {
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      font-size: 1.25rem;
+      color: var(--muted);
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* Cards inside slides */
+    .info-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .info-card h3 {
+      font-family: var(--font-title);
+      font-size: 1.3rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-card p, .info-card li {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .info-card ul {
+      list-style-type: none;
+      padding-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-card li::before {
+      content: "•";
+      color: var(--accent);
+      font-weight: bold;
+      display: inline-block;
+      width: 1em;
+      margin-left: 0.2em;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .alert.note {
+      background: rgba(94, 92, 230, 0.1);
+      border-left: 4px solid var(--accent);
+      color: #dfdfff;
+    }
+
+    .alert.important {
+      background: rgba(14, 138, 103, 0.1);
+      border-left: 4px solid var(--success);
+      color: #d1f2e8;
+    }
+
+    /* Control bar */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto 32px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      padding: 16px 24px;
+      border-radius: 18px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    button.nav-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: var(--font-title);
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button.nav-btn:hover:not(:disabled) {
+      background: var(--accent-grad);
+      border-color: transparent;
+      transform: translateY(-1px);
+    }
+
+    button.nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      margin: 0 32px;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent-grad);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Top bar buttons */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 5%;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo span {
+      background: var(--accent-grad);
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .action-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: var(--font-title);
+      font-weight: 500;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--muted);
+    }
+
+    /* Specific elements */
+    .passport-mock {
+      border: 1.5px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.01);
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .passport-avatar {
+      width: 70px;
+      height: 70px;
+      background: var(--accent-grad);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 1.8rem;
+    }
+
+    .passport-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .passport-qr {
+      width: 70px;
+      height: 70px;
+      background: white;
+      padding: 4px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .passport-qr img {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Table styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 500;
+      font-family: var(--font-title);
+    }
+
+    td {
+      color: var(--text);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge.success { background: rgba(14, 138, 103, 0.15); color: #2ecc71; border: 1px solid rgba(14, 138, 103, 0.3); }
+    .badge.warning { background: rgba(245, 166, 35, 0.15); color: #f39c12; border: 1px solid rgba(245, 166, 35, 0.3); }
+    .badge.accent { background: rgba(94, 92, 230, 0.15); color: #9b59b6; border: 1px solid rgba(94, 92, 230, 0.3); }
+
+    /* Print styling */
+    @media print {
+      body {
+        overflow: visible;
+        height: auto;
+        background: white;
+        color: black;
+      }
+      .top-bar, .controls {
+        display: none;
+      }
+      .slide-wrapper {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        max-height: none;
+        perspective: none;
+      }
+      .slide {
+        position: relative;
+        opacity: 1 !important;
+        transform: none !important;
+        display: flex !important;
+        page-break-after: always;
+        height: 100vh;
+        border: none;
+        box-shadow: none;
+        background: white;
+        color: black;
+      }
+      .slide-header h2 {
+        background: none;
+        -webkit-text-fill-color: black;
+        color: black;
+      }
+      .info-card {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        color: black;
+      }
+      .info-card h3, .info-card p, .info-card li {
+        color: black;
+      }
+      .alert {
+        background: #f0f0f0;
+        border-left-color: #333;
+        color: black;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Actions -->
+  <header class="top-bar">
+    <div class="logo">
+      <span></span>
+      <div>SHRAMIK <strong>LENS</strong></div>
+    </div>
+    <div class="action-group">
+      <button class="action-btn" onclick="printPdf()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Save as PDF / Print
+      </button>
+      <button class="action-btn" onclick="downloadSelf()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Download Presentation
+      </button>
+    </div>
+  </header>
+
+  <!-- Presentation Arena -->
+  <main class="presentation-container">
+    <div class="slide-wrapper">
+      
+      <!-- Slide 1: Cover -->
+      <section class="slide active">
+        <div></div>
+        <div class="slide-content" style="align-items: center; text-align: center;">
+          <h1 style="font-size: 5rem;">SHRAMIK <span class="gradient-text">LENS</span></h1>
+          <p class="subtitle" style="margin-bottom: 24px;">AI-Powered Digital Livelihood Passports for India's Informal Workforce</p>
+          <div class="alert note" style="max-width: 600px; margin: 0 auto; text-align: left;">
+            A state-of-the-art framework bringing verifiability, matching, and credentials to 400M+ daily wage & unorganized workers.
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Project Deck</span>
+          <span>Slide 1 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 2: The Core Problem -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>The Livelihood Trust Gap</h2>
+          <span class="slide-number">02</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="info-card" style="border-left: 4px solid var(--danger);">
+              <h3>⚠️ The Challenge</h3>
+              <ul>
+                <li><strong>Lack of Documentation</strong>: Working daily jobs generates no salary slips, HR letters, or official records.</li>
+                <li><strong>No Access to Credit</strong>: Traditional banks request credit scores which informal workers lack due to cash wages.</li>
+                <li><strong>Middlemen & Exploitation</strong>: Workforce deployment depends heavily on agents/brokers taking huge cuts.</li>
+              </ul>
+            </div>
+            <div class="info-card" style="border-left: 4px solid var(--success);">
+              <h3>✨ The Opportunity</h3>
+              <ul>
+                <li><strong>Verified Livelihood Record</strong>: Convert everyday transactions and peer recommendations into a digital portfolio.</li>
+                <li><strong>Dynamic Analytics</strong>: Visualise cash flows and verify income proofs using OCR scanning technology.</li>
+                <li><strong>Democratised Matching</strong>: Enable direct recruitment platforms using AI matching metrics.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Core Concept</span>
+          <span>Slide 2 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 3: Architecture -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>Monorepo Technology Stack</h2>
+          <span class="slide-number">03</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-3">
+            <div class="info-card">
+              <h3>🎨 Frontend Client</h3>
+              <p>Built with React 19, Vite, and Tailwind CSS for instant load times and fluid responsive rendering.</p>
+              <ul>
+                <li>Framer Motion Animations</li>
+                <li>Recharts Visualizations</li>
+                <li>React Query Cache Management</li>
+              </ul>
+            </div>
+            <div class="info-card">
+              <h3>⚙️ Express API Server</h3>
+              <p>Node.js backend with Express.js managing sessions via JWT access and refresh tokens.</p>
+              <ul>
+                <li>Socket.IO live updates</li>
+                <li>MongoDB / Mongoose DB Schemas</li>
+                <li>Rate-limiting security protections</li>
+              </ul>
+            </div>
+            <div class="info-card">
+              <h3>🤖 Cognitive & Services</h3>
+              <p>Deep API integrations handling background tasks, OCR verification, and generative conversations.</p>
+              <ul>
+                <li>Gemini 2.5 API Assistant</li>
+                <li>Tesseract.js OCR engine</li>
+                <li>Cloudinary Media uploads</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Architecture Blueprint</span>
+          <span>Slide 3 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 4: Passport -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>The Livelihood Passport</h2>
+          <span class="slide-number">04</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <p style="font-size: 1.1rem; line-height: 1.6; color: var(--muted);">
+                A single digital asset representing the worker's career. The passport compiles credentials, skills, locations, and bank details.
+              </p>
+              <div class="alert note">
+                🛡️ <strong>Verification URL</strong>: Publishes a secure profile endpoint `/api/public/passport/:publicId` that shields sensitive fields.
+              </div>
+              <div class="info-card">
+                <h3>Visibility Controls</h3>
+                <p>Granular checkboxes let workers toggles views on/off for basic profile, employment ledger, income aggregates, or contact phone numbers.</p>
+              </div>
+            </div>
+            <div class="passport-mock">
+              <div class="passport-avatar">RK</div>
+              <div class="passport-details">
+                <small style="color: var(--accent); font-weight: bold; letter-spacing: 0.05em;">WORKER ID: SL-A8F93</small>
+                <h4 style="font-size: 1.25rem;">Rajesh Kumar</h4>
+                <p style="font-size: 0.85rem; color: var(--text);">Senior Carpenter</p>
+                <span style="font-size: 0.8rem; color: var(--muted);">📍 Jaipur, Rajasthan</span>
+              </div>
+              <div class="passport-qr">
+                <svg viewBox="0 0 100 100" width="100%" height="100%">
+                  <rect x="0" y="0" width="100" height="100" fill="white" />
+                  <rect x="10" y="10" width="25" height="25" fill="black" />
+                  <rect x="65" y="10" width="25" height="25" fill="black" />
+                  <rect x="10" y="65" width="25" height="25" fill="black" />
+                  <rect x="40" y="40" width="20" height="20" fill="black" />
+                  <rect x="65" y="65" width="10" height="10" fill="black" />
+                  <rect x="80" y="80" width="10" height="10" fill="black" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Verifiable Profile</span>
+          <span>Slide 4 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 5: Income Insights -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>Income Insights & Analytics</h2>
+          <span class="slide-number">05</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="info-card">
+              <h3>📊 Verified Ledger System</h3>
+              <p>Rather than self-declared claims, Shramik Lens establishes proof of earnings via transaction receipts and direct client confirmation.</p>
+              <ul>
+                <li>Tracks income stability over 6 months</li>
+                <li>Monitors month-over-month percentage growth</li>
+                <li>Categorises income streams (UPI, Cash, Transfer)</li>
+              </ul>
+            </div>
+            <div>
+              <p style="font-family: var(--font-title); font-size: 1.1rem; margin-bottom: 8px;">Sample Earning Record Database</p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Employer</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>28 Jun 2026</td>
+                    <td>Kosha Collective</td>
+                    <td style="color: var(--accent); font-weight: bold;">₹18,500</td>
+                    <td><span class="badge success">Verified</span></td>
+                  </tr>
+                  <tr>
+                    <td>14 Jun 2026</td>
+                    <td>ABC Construction</td>
+                    <td style="color: var(--accent); font-weight: bold;">₹6,200</td>
+                    <td><span class="badge success">Verified</span></td>
+                  </tr>
+                  <tr>
+                    <td>02 Jun 2026</td>
+                    <td>Private Client</td>
+                    <td style="color: var(--accent); font-weight: bold;">₹1,500</td>
+                    <td><span class="badge warning">Pending</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Ledger Analytics</span>
+          <span>Slide 5 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 6: Document Vault -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>Smart Document Vault & OCR</h2>
+          <span class="slide-number">06</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div>
+              <p style="color: var(--muted); margin-bottom: 16px; line-height: 1.6;">
+                The document vault uses Tesseract OCR in the backend node service to parse transaction screenshots (such as GPay, PhonePe, or PayTM) and automatically extract data elements.
+              </p>
+              <div class="info-card">
+                <h3>🔍 Extracted Fields</h3>
+                <p><strong>Amount</strong>: Scans for numbers prefixing <code>₹</code>, <code>Rs.</code>, or <code>INR</code>.</p>
+                <p><strong>UTR/Ref No</strong>: Matches unique 12-digit numbers to verify transactions.</p>
+                <p><strong>Employer Name</strong>: Analyzes text structures ("Paid to...", "From...") to assign client records.</p>
+              </div>
+            </div>
+            <div class="info-card" style="border: 2px dashed rgba(255, 255, 255, 0.1); justify-content: center; align-items: center; text-align: center; background: rgba(94, 92, 230, 0.02);">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="margin-bottom: 12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              <h4>Instant OCR Dropzone</h4>
+              <p style="font-size: 0.8rem; color: var(--muted); max-width: 250px; margin-top: 6px;">Drop UPI screenshots, salary statements, or trade certificates for auto-processing.</p>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Automated Document Processing</span>
+          <span>Slide 6 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 7: AI Matching -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>AI Job Matchmaking Score</h2>
+          <span class="slide-number">07</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="info-card">
+              <h3>🎯 Score Breakdown System</h3>
+              <ul>
+                <li><strong>Skills Match (50%)</strong>: Tracks ratio of worker's verified skills to employer prerequisites.</li>
+                <li><strong>Location Proximity (20%)</strong>: Full points for same-city / remote, partial points for same-state match.</li>
+                <li><strong>Experience Verification (15%)</strong>: Checks if experience meets job needs.</li>
+                <li><strong>Salary Convergence (15%)</strong>: Validates expectation limits.</li>
+              </ul>
+            </div>
+            <div class="info-card" style="background: rgba(94, 92, 230, 0.05); justify-content: center; align-items: center; text-align: center;">
+              <h4 style="font-family: var(--font-title); font-size: 2.5rem; color: var(--text);">96%</h4>
+              <p style="color: var(--accent); font-weight: bold; font-family: var(--font-title); text-transform: uppercase;">Best Job Match Fit</p>
+              <p style="font-size: 0.85rem; color: var(--muted); max-width: 280px; margin-top: 10px; line-height: 1.5;">
+                Rajesh matches 3/3 required skills, resides in the target city, and the budget fits his requested monthly salary rate.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Job Matching Algorithm</span>
+          <span>Slide 7 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 8: Schemes Eligibility -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>Government Schemes Eligibility</h2>
+          <span class="slide-number">08</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="info-card">
+              <h3>📝 Eligibility Checking Logic</h3>
+              <p>Matches demographics, geography, and income indices against government directives:</p>
+              <ul>
+                <li><strong>Occupational match</strong>: Cross-checks job lists (e.g. tailor, potter).</li>
+                <li><strong>Income constraints</strong>: Projects ledger earnings relative to scheme thresholds.</li>
+                <li><strong>Age constraints</strong>: Computes DOB age values.</li>
+              </ul>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="info-card" style="padding: 16px;">
+                <h4 style="font-size: 1rem; color: var(--text); display: flex; justify-content: space-between; align-items: center;">
+                  PM Vishwakarma Scheme <span class="badge success">Eligible</span>
+                </h4>
+                <p style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;">Provides ₹15,000 toolkit incentives and low-interest credit lines.</p>
+              </div>
+              <div class="info-card" style="padding: 16px;">
+                <h4 style="font-size: 1rem; color: var(--text); display: flex; justify-content: space-between; align-items: center;">
+                  PMSBY Accident Cover <span class="badge success">Eligible</span>
+                </h4>
+                <p style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;">₹2 Lakh insurance coverage for an annual fee of just ₹20.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Welfare Matcher</span>
+          <span>Slide 8 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 9: Lens AI Assistant -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>Lens AI Livelihood Assistant</h2>
+          <span class="slide-number">09</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <p style="color: var(--muted); line-height: 1.6;">
+                An integrated helper powered by Gemini-2.5-Flash. It responds in both Hindi and English based on the language of the query.
+              </p>
+              <div class="alert note">
+                🔍 <strong>Context Infusion</strong>: Automatically prefixes the query with the worker's active profile snapshot (skills, earnings, and verified documents).
+              </div>
+            </div>
+            <div class="info-card" style="background: rgba(255, 255, 255, 0.01); border-color: rgba(94, 92, 230, 0.2);">
+              <div style="font-size: 0.85rem; color: var(--accent); font-weight: bold; margin-bottom: 8px;">LENS AI CHAT SIMULATION</div>
+              <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 8px;">
+                <strong>Worker:</strong> मुझे किस योजना का लाभ मिल सकता है?
+              </div>
+              <div style="background: rgba(94, 92, 230, 0.08); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; color: #dfdfff;">
+                <strong>Lens AI:</strong> आपके प्रोफाइल के अनुसार, आप <strong>PM Vishwakarma</strong> योजना के लिए योग्य हैं। इसमें आपको ₹15,000 टूलकिट सहायता मिलेगी।
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · AI Integration</span>
+          <span>Slide 9 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 10: Alternative Scoring -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>The Scoring Engines</h2>
+          <span class="slide-number">10</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="info-card">
+              <h3>🛡️ Trust Score Formula</h3>
+              <p>Replaces typical identity background checks using verifiable peer Vouching and transactions:</p>
+              <ul>
+                <li>Verified Employer Relations (25%)</li>
+                <li>Verified Document Vault (20%)</li>
+                <li>Verified Payment History (20%)</li>
+                <li>Profile Completion Progress (15%)</li>
+                <li>Verified Skills (10%)</li>
+                <li>Verified References (10%)</li>
+              </ul>
+            </div>
+            <div class="info-card">
+              <h3>💳 Financial Readiness Index</h3>
+              <p>Evaluates stability and transaction history to determine suitability for micro-loans:</p>
+              <ul>
+                <li>Income consistency rating (30%)</li>
+                <li>Employer verification count (20%)</li>
+                <li>Verified ledger payments (20%)</li>
+                <li>Count of verified documents (15%)</li>
+                <li>Employment duration stability (15%)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Scoring Science</span>
+          <span>Slide 10 of 11</span>
+        </div>
+      </section>
+
+      <!-- Slide 11: Roadmap & Future -->
+      <section class="slide">
+        <header class="slide-header">
+          <h2>The Roadmap Ahead</h2>
+          <span class="slide-number">11</span>
+        </header>
+        <div class="slide-content">
+          <div class="grid-3">
+            <div class="info-card">
+              <h3>💬 WhatsApp Integration</h3>
+              <p>Allows workers to upload transaction screenshots, query Lens AI, and check matches via WhatsApp Chat.</p>
+            </div>
+            <div class="info-card">
+              <h3>🎙️ Audio-First UI</h3>
+              <p>Adds support for localized voice queries, reading screens aloud for non-literate workers.</p>
+            </div>
+            <div class="info-card">
+              <h3>🏦 Micro-Lending Portal</h3>
+              <p>Integrates with local microfinance groups, sharing alternative scores to unlock credit approvals.</p>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Shramik Lens · Next Phase Evolution</span>
+          <span>Slide 11 of 11</span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Navigation Controls -->
+  <footer class="controls">
+    <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Previous
+    </button>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <button class="nav-btn" id="next-btn" onclick="changeSlide(1)">
+      Next
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </footer>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const progressBar = document.getElementById('progress-bar');
+
+    function updateProgressBar() {
+      const percentage = (currentSlide / (slides.length - 1)) * 100;
+      progressBar.style.width = percentage + '%';
+    }
+
+    function changeSlide(direction) {
+      slides[currentSlide].classList.remove('active');
+      slides[currentSlide].classList.add('prev');
+      
+      currentSlide = (currentSlide + direction + slides.length) % slides.length;
+      
+      slides.forEach((slide, index) => {
+        slide.classList.remove('active', 'prev');
+        if (index === currentSlide) {
+          slide.classList.add('active');
+        } else if (index < currentSlide) {
+          slide.classList.add('prev');
+        }
+      });
+
+      // Enable/disable buttons at boundary
+      prevBtn.disabled = currentSlide === 0;
+      nextBtn.disabled = currentSlide === slides.length - 1;
+
+      updateProgressBar();
+    }
+
+    // Key handlers
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        if (currentSlide < slides.length - 1) changeSlide(1);
+      } else if (e.key === 'ArrowLeft') {
+        if (currentSlide > 0) changeSlide(-1);
+      }
+    });
+
+    // Save/Download HTML presentation
+    function downloadSelf() {
+      const htmlContent = document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Shramik_Lens_Presentation.html';
+      a.click();
+    }
+
+    // Print to PDF
+    function printPdf() {
+      window.print();
+    }
+
+    // Init progress
+    updateProgressBar();
+  </script>
+</body>
+</html>
