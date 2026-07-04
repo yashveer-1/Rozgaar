@@ -20,6 +20,10 @@ const incomeSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false },
 }, { timestamps: true });
 incomeSchema.index({ worker: 1, date: -1 });
+incomeSchema.index(
+  { sourceDocument: 1 },
+  { unique: true, partialFilterExpression: { sourceDocument: { $type: 'objectId' } } },
+);
 
 const applicationSchema = new mongoose.Schema({
   worker: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

@@ -4,7 +4,7 @@ import { Job } from '../models/Job.js';
 import { Document } from '../models/Record.js';
 import { GovernmentScheme } from '../models/GovernmentScheme.js';
 import { Notification } from '../models/Notification.js';
-import { calculateProfileCompletion, calculateScores, getIncomeMetrics } from '../services/metricsService.js';
+import { recalculateWorkerMetrics } from '../services/metricsService.js';
 import { rankJobs } from '../services/matchingService.js';
 import { isEligible } from '../services/schemeService.js';
 
@@ -30,14 +30,11 @@ export async function getDashboard(req, res, next) {
         { new: true, upsert: true, setDefaultsOnInsert: true }
       );
     }
-    const income = await getIncomeMetrics(worker);
-    const completion = await calculateProfileCompletion(profile);
-    if (profile.profileCompletion !== completion) {
-      profile.profileCompletion = completion;
-      await profile.save();
-    }
+    const metrics = await recalculateWorkerMetrics(worker);
+    profile = metrics.profile;
+    const income = metrics.income;
     const [scores, jobs, schemes, notifications, documentCount] = await Promise.all([
-      calculateScores(profile, income),
+      Promise.resolve(metrics.scores),
       Job.find({ status: 'open' }).populate('employer', 'name').sort('-createdAt').limit(100),
       GovernmentScheme.find({ active: true }),
       Notification.find({ user: worker }).sort('-createdAt').limit(10),

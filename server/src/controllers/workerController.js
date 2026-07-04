@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { WorkerProfile } from '../models/WorkerProfile.js';
 import { calculateProfileCompletion } from '../services/metricsService.js';
+import { refreshExistingPassport } from '../services/passportService.js';
 import { notFound } from '../utils/httpError.js';
 
 export async function getMyProfile(req, res, next) {
@@ -28,6 +29,7 @@ export async function updateMyProfile(req, res, next) {
     );
     profile.profileCompletion = await calculateProfileCompletion(profile);
     await profile.save();
+    await refreshExistingPassport(req.user.sub);
     return res.json(profile);
   } catch (error) { return next(error); }
 }

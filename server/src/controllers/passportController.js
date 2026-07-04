@@ -1,9 +1,5 @@
-import crypto from 'node:crypto';
 import { Passport } from '../models/Passport.js';
-import { WorkerProfile } from '../models/WorkerProfile.js';
-import { GovernmentScheme } from '../models/GovernmentScheme.js';
-import { calculateScores, getIncomeMetrics } from '../services/metricsService.js';
-import { isEligible } from '../services/schemeService.js';
+import { buildWorkerSnapshot } from '../services/passportService.js';
 import { notify } from '../services/notificationService.js';
 import { notFound } from '../utils/httpError.js';
 
@@ -25,26 +21,10 @@ function simplePdf(lines) {
   return Buffer.from(body);
 }
 
-async function buildSnapshot(worker) {
-  let profile = await WorkerProfile.findOne({ user: worker }).populate('user', 'name');
-  if (!profile) {
-    profile = await WorkerProfile.findOneAndUpdate(
-      { user: worker },
-      { $setOnInsert: { publicId: `SL-${crypto.randomBytes(5).toString('hex').toUpperCase()}`, profileCompletion: 0 } },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    ).populate('user', 'name');
-  }
-  const [income, schemes] = await Promise.all([getIncomeMetrics(worker), GovernmentScheme.find({ active: true })]);
-  const scores = await calculateScores(profile, income);
-  return { profile, income, scores, eligibleSchemes: schemes.filter(scheme => isEligible(profile, scheme, income.monthlyIncome)).map(scheme => scheme.name) };
-}
-
 export async function generatePassport(req, res, next) {
   try {
-    const snapshot = await buildSnapshot(req.user.sub);
-    const publicId = snapshot.profile.publicId || `SL-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
-    snapshot.profile.publicId = publicId;
-    await snapshot.profile.save();
+    const snapshot = await buildWorkerSnapshot(req.user.sub);
+    const publicId = snapshot.profile.publicId;
     const passport = await Passport.findOneAndUpdate({ worker: req.user.sub }, { publicId, snapshot, generatedAt: new Date() }, { new: true, upsert: true });
     await notify(req, req.user.sub, { type: 'passport_generated', title: 'Passport generated', message: 'Your livelihood passport is ready.', data: { publicId } });
     return res.status(201).json({ ...passport.toObject(), publicUrl: `/public/passport/${publicId}` });
@@ -52,7 +32,7 @@ export async function generatePassport(req, res, next) {
 }
 export async function downloadPassport(req, res, next) {
   try {
-    const snapshot = await buildSnapshot(req.user.sub);
+    const snapshot = await buildWorkerSnapshot(req.user.sub);
     const lines = [
       'SHRAMIK LENS - LIVELIHOOD PASSPORT', `Name: ${snapshot.profile.user.name}`,
       `Occupation: ${snapshot.profile.occupation || 'Not provided'}`, `Experience: ${snapshot.profile.experienceYears || 0} years`,
@@ -75,7 +55,7 @@ export async function publicPassport(req, res, next) {
 
 export async function getCreditProfile(req, res, next) {
   try {
-    const snapshot = await buildSnapshot(req.user.sub);
+    const snapshot = await buildWorkerSnapshot(req.user.sub);
     return res.json({
       profile: snapshot.profile,
       income: snapshot.income,
@@ -87,7 +67,7 @@ export async function getCreditProfile(req, res, next) {
 
 export async function downloadCreditProfile(req, res, next) {
   try {
-    const snapshot = await buildSnapshot(req.user.sub);
+    const snapshot = await buildWorkerSnapshot(req.user.sub);
     const lines = [
       'SHRAMIK LENS - LIVELIHOOD CREDIT STATEMENT',
       `Name: ${snapshot.profile.user.name}`,

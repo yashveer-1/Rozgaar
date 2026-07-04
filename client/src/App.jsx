@@ -28,13 +28,29 @@ const nav = [
   { to: '/passport', icon: UserRound, label: 'My Passport' },
   { to: '/income', icon: TrendingUp, label: 'Income Insights' },
   { to: '/documents', icon: FileText, label: 'Documents' },
-  { to: '/jobs', icon: BriefcaseBusiness, label: 'Job Matches', badge: 6 },
-  { to: '/schemes', icon: HandCoins, label: 'Govt. Schemes', badge: 3 },
+  { to: '/jobs', icon: BriefcaseBusiness, label: 'Job Matches' },
+  { to: '/schemes', icon: HandCoins, label: 'Govt. Schemes' },
   { to: '/skills', icon: BookOpen, label: 'Skills & Growth' },
   { to: '/rights', icon: ShieldCheck, label: 'Rights & Safety' },
 ];
 
 const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: .35 } };
+
+const workerDataQueryKeys = [
+  'dashboard',
+  'income-summary',
+  'income-records',
+  'documents',
+  'worker-profile',
+  'jobs',
+  'schemes',
+  'passport',
+  'credit-profile',
+];
+
+function invalidateWorkerData(queryClient) {
+  workerDataQueryKeys.forEach(queryKey => queryClient.invalidateQueries({ queryKey: [queryKey] }));
+}
 
 function App() {
   const [session, setSession] = useState(loadSession);
@@ -304,15 +320,15 @@ function Passport() {
     <PageTitle eyebrow="VERIFIED WORK IDENTITY" title={<>Your livelihood <span>passport.</span></>} text="A portable, verifiable record of your skills, earnings and work history." action={<div className="passport-actions"><button className="outline-btn" onClick={()=>generate.mutate()} disabled={generate.isPending}>Generate</button><button className="primary-btn" onClick={download}><Download size={17}/> Download PDF</button></div>}/>
     <div className="passport-layout">
       <section className="passport-card">
-        <div className="passport-top"><Logo/><span><ShieldCheck size={15}/> VERIFIED PASSPORT</span></div>
+        <div className="passport-top"><Logo/><span><ShieldCheck size={15}/> {data.verifiedDocuments > 0 ? 'VERIFIED PASSPORT' : 'BUILDING PASSPORT'}</span></div>
         <div className="passport-person">
           <div className="big-avatar">{initials(session.user.name)}</div><div><small>WORKER ID · {publicId}</small><h2>{session.user.name} <BadgeCheck/></h2><p>{profile.occupation||'Occupation not added'}</p><span><MapPin/> {[profile.location?.city,profile.location?.state].filter(Boolean).join(', ')||'Location not added'}</span></div>
           <div className="qr"><QRCodeSVG value={absoluteApiUrl(`/public/passport/${profile.publicId || ''}`)} size={88}/><small>Scan to verify</small></div>
         </div>
-        <div className="passport-stats"><div><small>EXPERIENCE</small><b>{profile.experienceYears||0} years</b></div><div><small>VERIFIED DOCS</small><b>{data.verifiedDocuments}</b></div><div><small>READINESS</small><b>{data.financialReadiness.score} · {data.financialReadiness.category}</b></div><div><small>LANGUAGES</small><b>{profile.languages?.join(', ')||'Not added'}</b></div></div>
+        <div className="passport-stats"><div><small>EXPERIENCE</small><b>{profile.experienceYears||0} years</b></div><div><small>VERIFIED DOCS</small><b>{data.verifiedDocuments}</b></div><div><small>READINESS</small><b>{data.financialReadiness.score} · {data.financialReadiness.category}</b></div><div><small>MONTHLY INCOME</small><b>{formatMoney(data.monthlyIncome)}</b></div></div>
         <div className="passport-section"><h4>Verified skills</h4><div className="chips">{verifiedSkills.length?verifiedSkills.map(skill=><span key={skill._id||skill.name}>{skill.name}<Check/></span>):<EmptyState text="No skills verified yet."/>}</div></div>
         <div className="passport-section"><h4>Recent employment</h4>{profile.employmentHistory?.length?profile.employmentHistory.map(item=><div className="history" key={item._id}><i/><div><b>{item.title} · {item.employerName}</b><small>{item.verified?'Verified by employer':'Awaiting verification'}</small></div>{item.verified&&<BadgeCheck/>}</div>):<EmptyState text="No employment history added yet."/>}</div>
-        <div className="passport-foot"><LockKeyhole/> Sensitive personal and banking details are never shown publicly.<span>Last updated 28 Jun 2026</span></div>
+        <div className="passport-foot"><LockKeyhole/> Sensitive personal and banking details are never shown publicly.<span>Last updated {new Date().toLocaleDateString('en-IN')}</span></div>
       </section>
       <aside className="passport-side">
         <div className="card strength"><CardHead title="Passport strength" sub="Your verified profile quality"/><div className="strength-score"><div><strong>{data.trust.score}</strong><small>/100</small></div><span>{data.trust.badge}</span></div><div className="progress"><i style={{width:`${data.trust.score}%`}}/></div><p>Strength is calculated from verified profile evidence.</p></div>
@@ -342,10 +358,7 @@ function Income() {
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey:['income-summary'] });
-    queryClient.invalidateQueries({ queryKey:['income-records'] });
-    queryClient.invalidateQueries({ queryKey:['dashboard'] });
-    queryClient.invalidateQueries({ queryKey:['credit-profile'] });
+    invalidateWorkerData(queryClient);
   };
 
   const uploadMutation = useMutation({
@@ -706,23 +719,20 @@ function Income() {
 function Documents() {
   const queryClient=useQueryClient();
   const {data:docs=[],isLoading,error}=useQuery({queryKey:['documents'],queryFn:()=>apiFetch('/documents')});
-  const upload=useMutation({mutationFn:file=>{const body=new FormData();body.append('document',file);body.append('type','payment_receipt');return apiFetch('/documents',{method:'POST',body});},onSuccess:()=>{queryClient.invalidateQueries({queryKey:['documents']});queryClient.invalidateQueries({queryKey:['dashboard']});toast.success('Document uploaded and OCR processing completed');},onError:e=>toast.error(e.message)});
+  const upload=useMutation({mutationFn:file=>{const body=new FormData();body.append('document',file);body.append('type','payment_receipt');return apiFetch('/documents',{method:'POST',body});},onSuccess:doc=>{invalidateWorkerData(queryClient);toast.success(doc.incomeRecord?'Document verified and income added':'Document uploaded; no complete income transaction was detected');},onError:e=>toast.error(e.message)});
   const choose=file=>file&&upload.mutate(file);
 
   const deleteDoc = useMutation({
     mutationFn: id => apiFetch(`/documents/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
-      queryClient.invalidateQueries({ queryKey: ['income-records'] });
-      queryClient.invalidateQueries({ queryKey: ['income-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      invalidateWorkerData(queryClient);
       toast.success('Document deleted successfully');
     },
     onError: e => toast.error(e.message)
   });
 
   const handleDelete = id => {
-    if (window.confirm('Are you sure you want to delete this document? This will also remove any unverified income records associated with it.')) {
+    if (window.confirm('Are you sure you want to delete this document? This will also remove its extracted income record.')) {
       deleteDoc.mutate(id);
     }
   };
@@ -1106,11 +1116,7 @@ function Profile() {
       setIsDirty(false);
       window.hasUnsavedChanges = false;
       toast.success('Profile saved successfully');
-      queryClient.invalidateQueries({ queryKey: ['worker-profile'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['schemes'] });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['income-summary'] });
+      invalidateWorkerData(queryClient);
       queryClient.invalidateQueries({ queryKey: ['skill-recommendations'] });
     },
     onError: (err) => toast.error(err.message || 'Failed to save profile'),

@@ -1,4 +1,5 @@
 import { Document, IncomeRecord } from '../models/Record.js';
+import { WorkerProfile } from '../models/WorkerProfile.js';
 
 const round = value => Math.round(Number.isFinite(value) ? value : 0);
 const hasText = value => typeof value === 'string' && value.trim().length > 0;
@@ -50,9 +51,9 @@ export async function calculateScores(profile, incomeMetrics) {
     IncomeRecord.countDocuments({ worker: profile.user, verified: true }),
     IncomeRecord.distinct('employer', { worker: profile.user, verified: true, employer: { $ne: null } }),
   ]);
-  const incomes = incomeMetrics.graph.map(item => item.income).filter(Boolean);
+  const incomes = incomeMetrics.graph.map(item => item.income);
   const mean = incomes.reduce((sum, value) => sum + value, 0) / (incomes.length || 1);
-  const deviation = incomes.length ? Math.sqrt(incomes.reduce((sum, value) => sum + (value - mean) ** 2, 0) / incomes.length) : mean;
+  const deviation = incomes.length ? Math.sqrt(incomes.reduce((sum, value) => sum + (value - mean) ** 2, 0) / incomes.length) : 0;
   const consistency = mean ? Math.max(0, 1 - deviation / mean) : 0;
   const employment = profile.employmentHistory?.filter(item => item.verified).length || 0;
   const readinessScore = round(
@@ -75,4 +76,19 @@ export async function calculateScores(profile, incomeMetrics) {
   );
   const badge = trustScore >= 80 ? 'Excellent' : trustScore >= 60 ? 'Strong' : trustScore >= 35 ? 'Growing' : 'Building';
   return { financialReadiness: { score: readinessScore, category }, trust: { score: trustScore, badge }, counts: { verifiedDocuments, verifiedTransactions, verifiedEmployers: verifiedEmployers.length } };
+}
+
+export async function recalculateWorkerMetrics(worker) {
+  const profile = await WorkerProfile.findOne({ user: worker });
+  if (!profile) return null;
+
+  const profileCompletion = await calculateProfileCompletion(profile);
+  if (profile.profileCompletion !== profileCompletion) {
+    profile.profileCompletion = profileCompletion;
+    await profile.save();
+  }
+
+  const income = await getIncomeMetrics(profile.user);
+  const scores = await calculateScores(profile, income);
+  return { profile, income, scores };
 }

@@ -1,5 +1,7 @@
 import { Document, IncomeRecord } from '../models/Record.js';
 import { uploadDocument, runOcr } from '../services/documentService.js';
+import { recalculateWorkerMetrics } from '../services/metricsService.js';
+import { refreshExistingPassport } from '../services/passportService.js';
 import { HttpError, notFound } from '../utils/httpError.js';
 
 export async function listDocuments(req, res, next) {
@@ -14,26 +16,49 @@ export async function uploadAndExtract(req, res, next) {
       worker: req.user.sub, name: req.file.originalname, type: req.body.type || 'payment_receipt',
       url: uploaded.secure_url, cloudinaryId: uploaded.public_id, status: 'processing',
     });
+    let incomeRecord = null;
+    let extractedData = null;
     try {
-      const extractedData = await runOcr(req.file.buffer, req.file.mimetype);
+      extractedData = await runOcr(req.file.buffer, req.file.mimetype);
       document.extractedData = extractedData;
-      if (extractedData.amount && extractedData.date) {
-        await IncomeRecord.create({
-          worker: req.user.sub, sourceDocument: document.id, amount: extractedData.amount,
-          date: extractedData.date, employerName: extractedData.employer,
-          paymentMethod: document.type === 'upi' ? 'upi' : 'other',
-          referenceNumber: extractedData.referenceNumber, verified: false,
-        });
-      }
-      document.status = 'verified';
-      await document.save();
     } catch (ocrError) {
       document.extractedData = { error: 'OCR extraction failed' };
-      document.status = 'verified';
-      await document.save();
       console.error('OCR failed', ocrError);
     }
-    return res.status(201).json(document);
+    document.status = 'verified';
+    await document.save();
+
+    if (extractedData?.amount && extractedData.date) {
+      incomeRecord = await IncomeRecord.findOneAndUpdate(
+        { sourceDocument: document._id },
+        {
+          $setOnInsert: {
+            worker: req.user.sub,
+            sourceDocument: document._id,
+            amount: extractedData.amount,
+            date: extractedData.date,
+            employerName: extractedData.employer,
+            paymentMethod: extractedData.paymentMethod || (document.type === 'upi' ? 'upi' : 'other'),
+            referenceNumber: extractedData.referenceNumber,
+            verified: true,
+          },
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+      );
+    }
+
+    const metrics = await recalculateWorkerMetrics(req.user.sub);
+    await refreshExistingPassport(req.user.sub);
+    return res.status(201).json({
+      ...document.toObject(),
+      incomeRecord,
+      metrics: metrics ? {
+        monthlyIncome: metrics.income.monthlyIncome,
+        financialReadiness: metrics.scores.financialReadiness,
+        trust: metrics.scores.trust,
+        profileCompletion: metrics.profile.profileCompletion,
+      } : null,
+    });
   } catch (error) { return next(error); }
 }
 
@@ -41,8 +66,10 @@ export async function deleteDocument(req, res, next) {
   try {
     const document = await Document.findOne({ _id: req.params.id, worker: req.user.sub });
     if (!document) throw notFound('Document');
-    await IncomeRecord.deleteMany({ sourceDocument: document.id, verified: false });
+    await IncomeRecord.deleteMany({ sourceDocument: document.id });
     await document.deleteOne();
+    await recalculateWorkerMetrics(req.user.sub);
+    await refreshExistingPassport(req.user.sub);
     return res.status(204).end();
   } catch (error) { return next(error); }
 }

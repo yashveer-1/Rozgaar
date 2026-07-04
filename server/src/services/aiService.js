@@ -1,6 +1,33 @@
 const endpoint =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
+export async function structureTransaction(rawText) {
+  if (!process.env.GEMINI_API_KEY || !rawText?.trim()) return null;
+
+  const prompt = `Convert the following OCR text from an Indian payment document into JSON.
+Extract facts only; do not infer or calculate financial metrics.
+Return exactly these keys:
+{"amount": number|null, "employer": string|null, "date": "YYYY-MM-DD"|null, "referenceNumber": string|null, "paymentMethod": "upi"|"cash"|"bank_transfer"|"cheque"|"other"}
+
+OCR text:
+${rawText}`;
+
+  const response = await fetch(`${endpoint}?key=${process.env.GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+    }),
+  });
+  if (!response.ok) throw new Error(`Gemini transaction extraction failed (${response.status})`);
+
+  const body = await response.json();
+  const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Gemini returned no transaction data');
+  return JSON.parse(text);
+}
+
 function getSystemContext(lang) {
   let instruction = "Answer in English.";
   if (lang === 'hi' || lang === 'hindi') {
