@@ -1,3 +1,5 @@
+import { apiUrl } from './config';
+
 const SESSION_KEY = 'shramik-lens-session';
 
 export function loadSession() {
@@ -35,7 +37,7 @@ function tokenExpiry(token) {
 }
 
 async function authRequest(path, options) {
-  const response = await fetch(`/api/auth/${path}`, options);
+  const response = await fetch(apiUrl(`/auth/${path}`), options);
   const body = response.status === 204 ? {} : await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.message || 'Unable to complete authentication');
   return body;

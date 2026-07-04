@@ -17,6 +17,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, formatMoney, formatPay } from './api';
+import { absoluteApiUrl } from './config';
 import {
   authenticate, clearSession, loadSession, millisecondsUntilRefresh, refreshSession, revokeSession,
 } from './auth';
@@ -306,7 +307,7 @@ function Passport() {
         <div className="passport-top"><Logo/><span><ShieldCheck size={15}/> VERIFIED PASSPORT</span></div>
         <div className="passport-person">
           <div className="big-avatar">{initials(session.user.name)}</div><div><small>WORKER ID · {publicId}</small><h2>{session.user.name} <BadgeCheck/></h2><p>{profile.occupation||'Occupation not added'}</p><span><MapPin/> {[profile.location?.city,profile.location?.state].filter(Boolean).join(', ')||'Location not added'}</span></div>
-          <div className="qr"><QRCodeSVG value={`${window.location.origin}/api/public/passport/${profile.publicId||''}`} size={88}/><small>Scan to verify</small></div>
+          <div className="qr"><QRCodeSVG value={absoluteApiUrl(`/public/passport/${profile.publicId || ''}`)} size={88}/><small>Scan to verify</small></div>
         </div>
         <div className="passport-stats"><div><small>EXPERIENCE</small><b>{profile.experienceYears||0} years</b></div><div><small>VERIFIED DOCS</small><b>{data.verifiedDocuments}</b></div><div><small>READINESS</small><b>{data.financialReadiness.score} · {data.financialReadiness.category}</b></div><div><small>LANGUAGES</small><b>{profile.languages?.join(', ')||'Not added'}</b></div></div>
         <div className="passport-section"><h4>Verified skills</h4><div className="chips">{verifiedSkills.length?verifiedSkills.map(skill=><span key={skill._id||skill.name}>{skill.name}<Check/></span>):<EmptyState text="No skills verified yet."/>}</div></div>
@@ -316,7 +317,7 @@ function Passport() {
       <aside className="passport-side">
         <div className="card strength"><CardHead title="Passport strength" sub="Your verified profile quality"/><div className="strength-score"><div><strong>{data.trust.score}</strong><small>/100</small></div><span>{data.trust.badge}</span></div><div className="progress"><i style={{width:`${data.trust.score}%`}}/></div><p>Strength is calculated from verified profile evidence.</p></div>
         <div className="card"><CardHead title="Visibility controls" sub="Choose what verifiers can see"/>{['Basic profile & skills','Employment history','Income range','Contact details'].map((x,i)=><label className="toggle-row" key={x}><span>{x}</span><input type="checkbox" defaultChecked={i<3}/><i/></label>)}</div>
-        <button className="share-passport" onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/api/public/passport/${profile.publicId||''}`); toast.success('Verification link copied'); }}><QrCode/><div><b>Share verification link</b><small>Let employers verify your passport</small></div><ArrowRight/></button>
+        <button className="share-passport" onClick={() => { navigator.clipboard?.writeText(absoluteApiUrl(`/public/passport/${profile.publicId || ''}`)); toast.success('Verification link copied'); }}><QrCode/><div><b>Share verification link</b><small>Let employers verify your passport</small></div><ArrowRight/></button>
       </aside>
     </div>
   </motion.div>;
@@ -758,7 +759,7 @@ function Jobs() {
   useEffect(() => {
     if (selectedJob && profile) {
       const skillsList = (profile.skills || []).filter(s => s.verified).map(s => s.name).join(', ') || 'General Trade';
-      const passportUrl = `${window.location.origin}/api/public/passport/${profile.publicId || ''}`;
+      const passportUrl = absoluteApiUrl(`/public/passport/${profile.publicId || ''}`);
       
       setCoverLetter(`Namaste,
 
