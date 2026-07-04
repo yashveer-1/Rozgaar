@@ -8,6 +8,7 @@ import {
   LogOut, MapPin, Menu, MessageCircleMore, Moon, MoreHorizontal, QrCode, Search,
   ShieldCheck, Sparkles, Star, Sun, Target, TrendingUp, Upload, UserRound,
   UsersRound, WalletCards, X, Zap, Eye, EyeOff, Mail, KeyRound, Trash2,
+  Mic, Volume2, VolumeX,
 } from 'lucide-react';
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis,
@@ -29,6 +30,7 @@ const nav = [
   { to: '/jobs', icon: BriefcaseBusiness, label: 'Job Matches', badge: 6 },
   { to: '/schemes', icon: HandCoins, label: 'Govt. Schemes', badge: 3 },
   { to: '/skills', icon: BookOpen, label: 'Skills & Growth' },
+  { to: '/rights', icon: ShieldCheck, label: 'Rights & Safety' },
 ];
 
 const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: .35 } };
@@ -79,6 +81,7 @@ function App() {
             <Route path="/schemes" element={<Schemes />} />
             <Route path="/skills" element={<Skills />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/rights" element={<Rights />} />
           </Routes>
         </main>
       </div>
@@ -206,7 +209,7 @@ function Topbar({ dark, setDark, openMenu, user }) {
   const location = useLocation();
   const navigate = useNavigate();
   const {data}=useQuery({queryKey:['dashboard'],queryFn:()=>apiFetch('/dashboard'),enabled:user.role==='worker'});
-  const labels = { '/passport': 'My Livelihood Passport', '/income': 'Income Insights', '/documents': 'Document Vault', '/jobs': 'Job Matches', '/schemes': 'Government Schemes', '/skills': 'Skills & Growth', '/profile': 'Profile Setup & Edit' };
+  const labels = { '/passport': 'My Livelihood Passport', '/income': 'Income Insights', '/documents': 'Document Vault', '/jobs': 'Job Matches', '/schemes': 'Government Schemes', '/skills': 'Skills & Growth', '/profile': 'Profile Setup & Edit', '/rights': 'Rights & Safety' };
   return <header className="topbar">
     <div className="top-left"><button className="icon-btn menu-btn" onClick={openMenu}><Menu/></button><div><small>{user.role.toUpperCase()} PORTAL</small><h3>{labels[location.pathname] || `Welcome, ${user.name.split(' ')[0]} 👋`}</h3></div></div>
     <div className="top-actions">
@@ -326,14 +329,22 @@ function Income() {
   const records = useQuery({ queryKey:['income-records'], queryFn:()=>apiFetch('/income') });
 
   const [showModal, setShowModal] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
   const [tab, setTab] = useState('upload'); // 'upload' | 'manual'
   const [form, setForm] = useState({ amount:'', date:'', employerName:'', paymentMethod:'other', referenceNumber:'' });
   const fileRef = useRef(null);
+
+  const creditProfileQuery = useQuery({ 
+    queryKey: ['credit-profile'], 
+    queryFn: () => apiFetch('/passport/credit-profile'),
+    enabled: showCreditModal 
+  });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey:['income-summary'] });
     queryClient.invalidateQueries({ queryKey:['income-records'] });
     queryClient.invalidateQueries({ queryKey:['dashboard'] });
+    queryClient.invalidateQueries({ queryKey:['credit-profile'] });
   };
 
   const uploadMutation = useMutation({
@@ -369,6 +380,21 @@ function Income() {
     manualMutation.mutate({ ...form, amount: Number(form.amount) });
   };
 
+  const handleDownloadCredit = async () => {
+    try {
+      const blob = await apiFetch('/passport/credit-profile/download');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'livelihood-credit-statement.pdf';
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Downloaded livelihood credit statement PDF');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   if (isLoading || dashboard.isLoading) return <LoadingState text="Calculating income insights…"/>;
   if (error || dashboard.error) return <ErrorState error={error || dashboard.error}/>;
   const readiness = dashboard.data.financialReadiness;
@@ -393,6 +419,53 @@ function Income() {
         <div><small>PAYMENT ACTIVITY</small><h3>{transactionFrequency ? 'Active' : 'No records yet'}</h3><p>{transactionFrequency} transactions recorded this month</p></div>
         <div><small>FINANCIAL READINESS INDEX</small><h3>{readiness.score} <em>/100</em></h3><p>{readiness.category} · built from verified patterns</p></div>
       </div>
+
+      {/* Credit Profile Builder Card */}
+      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700 }}><WalletCards size={16} style={{ color: 'var(--purple)', display: 'inline', marginRight: 8, verticalAlign: 'middle' }}/> Livelihood Credit Profile</h3>
+            <p style={{ fontSize: 9, color: 'var(--muted)', marginTop: 4 }}>A verified alternative underwriting profile designed for bank-free micro-credit approvals.</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="outline-btn" style={{ height: 32 }} onClick={() => setShowCreditModal(true)}><Eye size={13}/> View statement</button>
+            <button className="primary-btn" style={{ height: 32 }} onClick={handleDownloadCredit}><Download size={13}/> Download PDF</button>
+          </div>
+        </div>
+
+        {/* Micro-credit matching list */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginTop: 16 }}>
+          <div className="card2" style={{ padding: 14, borderRadius: 10, border: '1px solid var(--line)' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, padding: '3px 6px', background: 'var(--purple2)', color: 'var(--purple)', borderRadius: 10 }}>ARTISANS / TRADES</span>
+            <b style={{ display: 'block', fontSize: 10, marginTop: 8 }}>PM Vishwakarma Credit Support</b>
+            <p style={{ fontSize: 8, color: 'var(--muted)', margin: '4px 0 10px' }}>Collateral-free enterprise growth loans up to ₹3,00,000 at concessional interest rate (5%).</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 8, color: '#13805e', background: '#e3f4ec', padding: '3px 7px', borderRadius: 8 }}>Highly Recommended</span>
+              <a className="text-btn" href="https://pmvishwakarma.gov.in/" target="_blank" rel="noreferrer">Official site</a>
+            </div>
+          </div>
+
+          <div className="card2" style={{ padding: 14, borderRadius: 10, border: '1px solid var(--line)' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, padding: '3px 6px', background: '#fff0dc', color: '#c27d1d', borderRadius: 10 }}>MICRO-VENDORS</span>
+            <b style={{ display: 'block', fontSize: 10, marginTop: 8 }}>PM SVANidhi Scheme</b>
+            <p style={{ fontSize: 8, color: 'var(--muted)', margin: '4px 0 10px' }}>Special micro-credit facility for street vendors up to ₹50,000 with timely repayment incentives.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 8, color: '#13805e', background: '#e3f4ec', padding: '3px 7px', borderRadius: 8 }}>Eligible</span>
+              <a className="text-btn" href="https://pmsvanidhi.mohua.gov.in/" target="_blank" rel="noreferrer">Official site</a>
+            </div>
+          </div>
+
+          <div className="card2" style={{ padding: 14, borderRadius: 10, border: '1px solid var(--line)' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, padding: '3px 6px', background: '#e7f2fb', color: '#4082b7', borderRadius: 10 }}>GENERAL SERVICE TRADES</span>
+            <b style={{ display: 'block', fontSize: 10, marginTop: 8 }}>MUDRA Shishu Loan</b>
+            <p style={{ fontSize: 8, color: 'var(--muted)', margin: '4px 0 10px' }}>Non-farm business credit up to ₹50,000 for starting or expanding small service operations.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 8, color: '#13805e', background: '#e3f4ec', padding: '3px 7px', borderRadius: 8 }}>Eligible</span>
+              <a className="text-btn" href="https://www.mudra.org.in/" target="_blank" rel="noreferrer">Official site</a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Chart */}
       <section className="card large-chart">
@@ -431,7 +504,7 @@ function Income() {
         </div>
       </section>
 
-      {/* Modal */}
+      {/* Add Income Proof Modal */}
       <AnimatePresence>
         {showModal && (
           <>
@@ -524,6 +597,102 @@ function Income() {
                   </button>
                 </div>
               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Credit Statement View Modal */}
+      <AnimatePresence>
+        {showCreditModal && (
+          <>
+            <motion.div className="assistant-scrim" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setShowCreditModal(false)}/>
+            <motion.div
+              initial={{ opacity:0, y:60 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:60 }}
+              transition={{ type:'spring', damping:28 }}
+              style={{
+                position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)',
+                width:'min(650px, 100vw)', background:'var(--card)', borderRadius:'20px 20px 0 0',
+                padding:'28px 24px 32px', zIndex:1100, boxShadow:'0 -8px 40px rgba(0,0,0,0.35)',
+                maxHeight: '85vh', overflowY: 'auto'
+              }}
+            >
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+                <b style={{ fontSize:15 }}><WalletCards size={18} style={{ color: 'var(--purple)', display: 'inline', marginRight: 8 }}/> Livelihood Credit Statement</b>
+                <button className="icon-btn" onClick={() => setShowCreditModal(false)}><X size={18}/></button>
+              </div>
+
+              {creditProfileQuery.isLoading ? (
+                <EmptyState text="Retrieving verified transaction history…"/>
+              ) : creditProfileQuery.error ? (
+                <ErrorState error={creditProfileQuery.error}/>
+              ) : (
+                <div className="printable-statement" style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 20, background: 'var(--card2)', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--purple)', paddingBottom: 12, marginBottom: 16 }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontFamily: 'Georgia, serif', fontSize: 16, color: 'var(--purple)' }}>SHRAMIK LENS</h4>
+                      <small style={{ fontSize: 7, color: 'var(--muted)', letterSpacing: 0.5 }}>DIGITAL LIVELIHOOD LEDGER</small>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: 8, color: '#13805e', background: '#e3f4ec', padding: '3px 8px', borderRadius: 10, fontWeight: 700 }}>VERIFIED PROFILE</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 11, marginBottom: 16 }}>
+                    <div>
+                      <span style={{ display: 'block', fontSize: 8, color: 'var(--muted)' }}>WORKER ID</span>
+                      <b>{creditProfileQuery.data?.profile?.publicId || 'SL-PENDING'}</b>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: 8, color: 'var(--muted)' }}>STATEMENT DATE</span>
+                      <b>{new Date().toLocaleDateString('en-IN')}</b>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: 8, color: 'var(--muted)' }}>HOLDER NAME</span>
+                      <b>{dashboard.data?.profile?.user?.name || 'Worker'}</b>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: 8, color: 'var(--muted)' }}>OCCUPATION</span>
+                      <b>{creditProfileQuery.data?.profile?.occupation || 'Not Specified'}</b>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, padding: 12, background: 'var(--card)', borderRadius: 8, border: '1px solid var(--line)', marginBottom: 16, textAlign: 'center' }}>
+                    <div>
+                      <small style={{ fontSize: 7, color: 'var(--muted)', display: 'block' }}>READINESS SCORE</small>
+                      <strong style={{ fontSize: 16, color: 'var(--purple)', fontFamily: 'Georgia, serif' }}>{creditProfileQuery.data?.scores?.financialReadiness?.score}/100</strong>
+                    </div>
+                    <div>
+                      <small style={{ fontSize: 7, color: 'var(--muted)', display: 'block' }}>6-MONTH TOTAL</small>
+                      <strong style={{ fontSize: 16, fontFamily: 'Georgia, serif' }}>{formatMoney(creditProfileQuery.data?.income?.sixMonthTotal)}</strong>
+                    </div>
+                    <div>
+                      <small style={{ fontSize: 7, color: 'var(--muted)', display: 'block' }}>VERIFIED PAPERS</small>
+                      <strong style={{ fontSize: 16, color: '#13805e', fontFamily: 'Georgia, serif' }}>{creditProfileQuery.data?.scores?.counts?.verifiedDocuments || 0}</strong>
+                    </div>
+                  </div>
+
+                  <h5 style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid var(--line)', paddingBottom: 6, margin: '14px 0 8px' }}>Earning Records (Last 6 Months)</h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {creditProfileQuery.data?.income?.graph?.map(item => (
+                      <div key={item.month} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, padding: '4px 0', borderBottom: '1px dashed var(--line)' }}>
+                        <span>{item.month} {item.year}</span>
+                        <b>{formatMoney(item.income)}</b>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 20, fontSize: 8, color: 'var(--muted)', borderTop: '1px solid var(--line)', paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Generated securely via Shramik Lens</span>
+                    <span>System ID: {creditProfileQuery.data?.profile?.user?._id || 'Verified'}</span>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="outline-btn" style={{ flex: 1 }} onClick={() => window.print()} disabled={creditProfileQuery.isLoading}><FileText size={14}/> Print statement</button>
+                <button className="primary-btn" style={{ flex: 1 }} onClick={handleDownloadCredit} disabled={creditProfileQuery.isLoading}><Download size={14}/> Download PDF</button>
+              </div>
             </motion.div>
           </>
         )}
@@ -1228,8 +1397,12 @@ function Assistant({ open, close }) {
   const [messages, setMessages] = useState([{ ai: true, text: WELCOME }]);
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState(null);
+  
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Auto-scroll to bottom whenever messages change
   useEffect(() => {
@@ -1239,6 +1412,18 @@ function Assistant({ open, close }) {
   // Focus input when panel opens
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
+  }, [open]);
+
+  // Clean up speech synthesis on close
+  useEffect(() => {
+    if (!open) {
+      window.speechSynthesis?.cancel();
+      setSpeakingIdx(null);
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        setRecording(false);
+      }
+    }
   }, [open]);
 
   const sendMessage = async (q) => {
@@ -1268,6 +1453,77 @@ function Assistant({ open, close }) {
   const send = () => sendMessage(value.trim());
   const quickSend = q => sendMessage(q);
 
+  // Speech to Text (Speech Recognition)
+  const toggleSpeech = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error('Voice input is not supported in this browser. Please try Chrome/Edge.');
+      return;
+    }
+
+    if (recording) {
+      recognitionRef.current?.stop();
+      setRecording(false);
+    } else {
+      const rec = new SpeechRecognition();
+      rec.lang = 'hi-IN'; // Supports Hindi + English mixed naturally
+      rec.continuous = false;
+      rec.interimResults = false;
+
+      rec.onstart = () => {
+        setRecording(true);
+        toast.info('Listening… Speak now in Hindi or English.');
+      };
+
+      rec.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setValue(transcript);
+        toast.success('Speech captured!');
+      };
+
+      rec.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error !== 'no-speech') {
+          toast.error(`Voice input error: ${event.error}`);
+        }
+        setRecording(false);
+      };
+
+      rec.onend = () => {
+        setRecording(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    }
+  };
+
+  // Text to Speech (Audio read aloud)
+  const speakMessage = (text, index) => {
+    if (!window.speechSynthesis) {
+      toast.error('Audio playback is not supported in your browser.');
+      return;
+    }
+
+    if (speakingIdx === index) {
+      window.speechSynthesis.cancel();
+      setSpeakingIdx(null);
+    } else {
+      window.speechSynthesis.cancel(); // Stop current speech
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Select Indian English/Hindi voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const indianVoice = voices.find(v => v.lang.includes('IN') || v.lang.includes('hi'));
+      if (indianVoice) utterance.voice = indianVoice;
+
+      utterance.onend = () => setSpeakingIdx(null);
+      utterance.onerror = () => setSpeakingIdx(null);
+
+      setSpeakingIdx(index);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   const QUICK_PROMPTS = [
     'Which schemes am I eligible for?',
@@ -1303,7 +1559,19 @@ function Assistant({ open, close }) {
               {messages.map((m, i) => (
                 <div className={m.ai ? 'ai-message' : 'my-message'} key={i}>
                   {m.ai && <span><Sparkles/></span>}
-                  <p style={{ whiteSpace: 'pre-wrap', color: m.error ? '#e05' : undefined }}>{m.text}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <p style={{ whiteSpace: 'pre-wrap', color: m.error ? '#e05' : undefined }}>{m.text}</p>
+                    {m.ai && !m.error && (
+                      <button 
+                        className={`speech-btn ${speakingIdx === i ? 'active' : ''}`} 
+                        onClick={() => speakMessage(m.text, i)} 
+                        title={speakingIdx === i ? 'Stop Reading' : 'Read Aloud'}
+                        style={{ alignSelf: 'flex-start' }}
+                      >
+                        {speakingIdx === i ? <VolumeX size={12}/> : <Volume2 size={12}/>}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
 
@@ -1330,6 +1598,15 @@ function Assistant({ open, close }) {
 
             {/* Input */}
             <div className="assistant-input">
+              <button 
+                className={`speech-btn ${recording ? 'active' : ''}`}
+                onClick={toggleSpeech}
+                title={recording ? 'Stop Listening' : 'Speak Message'}
+                disabled={loading}
+                style={{ flexShrink: 0, margin: 'auto 6px', width: 28, height: 28 }}
+              >
+                <Mic size={14}/>
+              </button>
               <input
                 ref={inputRef}
                 value={value}
@@ -1349,4 +1626,343 @@ function Assistant({ open, close }) {
     </AnimatePresence>
   );
 }
+
+// ─── RIGHTS & SAFETY PAGE ───────────────────────────────────────────────────
+function Rights() {
+  const [state, setState] = useState('Rajasthan');
+  const [occupation, setOccupation] = useState('Tailoring');
+  const [wage, setWage] = useState('');
+  const [unit, setUnit] = useState('day');
+  
+  // Wage Check State
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
+
+  // Dispute Letter Form State
+  const [disputeForm, setDisputeForm] = useState({
+    employerName: '',
+    startDate: '',
+    endDate: '',
+    currentlyWorking: false,
+    unpaidAmount: '',
+    description: '',
+    employerPhone: '',
+    language: 'en'
+  });
+  const [drafting, setDrafting] = useState(false);
+  const [draftedLetter, setDraftedLetter] = useState('');
+
+  const runWageCheck = async (e) => {
+    e?.preventDefault();
+    if (!wage) return toast.error('Please enter your wage');
+    setChecking(true);
+    try {
+      const res = await apiFetch(`/rights/wage-check?state=${encodeURIComponent(state)}&occupation=${encodeURIComponent(occupation)}&wage=${wage}&unit=${unit}`);
+      setCheckResult(res);
+      if (res.isUnderpaid) {
+        toast.warning('Your pay appears to be below the legal minimum wage.', { duration: 6000 });
+      } else {
+        toast.success('Your pay meets the legal minimum wage requirements!');
+      }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleDraftDispute = async (e) => {
+    e?.preventDefault();
+    if (!disputeForm.employerName || !disputeForm.unpaidAmount || !disputeForm.startDate) {
+      return toast.error('Employer name, start date, and unpaid amount are required');
+    }
+    setDrafting(true);
+    try {
+      const res = await apiFetch('/rights/dispute-letter', {
+        method: 'POST',
+        body: JSON.stringify({
+          employerName: disputeForm.employerName,
+          startDate: disputeForm.startDate,
+          endDate: disputeForm.currentlyWorking ? 'Present' : disputeForm.endDate,
+          unpaidAmount: Number(disputeForm.unpaidAmount),
+          description: disputeForm.description,
+          language: disputeForm.language
+        })
+      });
+      setDraftedLetter(res.letter);
+      toast.success('AI dispute notice drafted successfully!');
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setDrafting(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (!draftedLetter) return;
+    navigator.clipboard.writeText(draftedLetter);
+    toast.success('Message copied to clipboard');
+  };
+
+  const sendWhatsApp = () => {
+    if (!draftedLetter) return;
+    const phone = disputeForm.employerPhone ? disputeForm.employerPhone.replace(/\D/g, '') : '';
+    const cleanPhone = phone.length === 10 ? `91${phone}` : phone;
+    const url = `https://api.whatsapp.com/send?${cleanPhone ? `phone=${cleanPhone}&` : ''}text=${encodeURIComponent(draftedLetter)}`;
+    window.open(url, '_blank');
+  };
+
+  // Pre-populate dispute writer if underpaid
+  const prefillDispute = () => {
+    if (!checkResult) return;
+    const missingDays = unit === 'month' ? 26 : 1;
+    const estimatedUnpaid = checkResult.isUnderpaid 
+      ? (checkResult.minimumDailyWage - checkResult.userWageNormalizedDaily) * missingDays
+      : 0;
+
+    setDisputeForm(f => ({
+      ...f,
+      unpaidAmount: estimatedUnpaid > 0 ? String(Math.round(estimatedUnpaid)) : '',
+      description: `Dispute regarding underpayment of wages. The paid rate is below the state minimum wage of ₹${checkResult.minimumDailyWage}/day for ${occupation} in ${state}.`
+    }));
+
+    // Scroll to the dispute section
+    const el = document.getElementById('dispute-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <motion.div {...fade}>
+      <PageTitle
+        eyebrow="LEGAL SAFEGUARDS & SAFETY NET"
+        title={<>Your work, <span>protected.</span></>}
+        text="Tools designed to safeguard your wages, resolve disputes with AI support, and connect you to social security."
+      />
+
+      <div className="rights-layout">
+        {/* Left Side: Wage Calculator & Check */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <section className="card profile-card">
+            <h3><ShieldCheck size={18}/> Minimum Wage Checker</h3>
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>
+              Compare your earnings with the legally mandated minimum wage thresholds set by state governments.
+            </p>
+
+            <form onSubmit={runWageCheck} className="profile-form-grid">
+              <div className="profile-fields-grid">
+                <label className="profile-label">STATE
+                  <select className="profile-select" value={state} onChange={e => setState(e.target.value)}>
+                    {['Rajasthan','Delhi','Maharashtra','Karnataka','Uttar Pradesh','Tamil Nadu','West Bengal'].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="profile-label">TRADE / OCCUPATION
+                  <select className="profile-select" value={occupation} onChange={e => setOccupation(e.target.value)}>
+                    {SKILLS_SUGGESTIONS.map(occ => (
+                      <option key={occ} value={occ}>{occ}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="profile-label">YOUR PAY (₹)
+                  <input className="profile-input" type="number" placeholder="e.g. 500" required value={wage} onChange={e => setWage(e.target.value)}/>
+                </label>
+
+                <label className="profile-label">PAY UNIT
+                  <select className="profile-select" value={unit} onChange={e => setUnit(e.target.value)}>
+                    <option value="hour">Per Hour</option>
+                    <option value="day">Per Day (8 hrs)</option>
+                    <option value="month">Per Month</option>
+                  </select>
+                </label>
+              </div>
+
+              <button className="primary-btn" disabled={checking} style={{ marginTop: 10 }}>
+                {checking ? 'Checking standards…' : 'Check legal wage'}
+              </button>
+            </form>
+
+            {/* Results Output */}
+            {checkResult && (
+              <div className="rights-gauge-container">
+                <div className="gauge-visual">
+                  <div className="gauge-arc"/>
+                  <div 
+                    className="gauge-fill" 
+                    style={{ 
+                      transform: `rotate(${Math.min(180, Math.max(0, (checkResult.userWageNormalizedDaily / checkResult.minimumDailyWage) * 180 - 90))}deg)`,
+                      borderColor: checkResult.isUnderpaid ? '#ff453a' : 'var(--green)'
+                    }}
+                  />
+                  <div className="gauge-text" style={{ color: checkResult.isUnderpaid ? '#ff453a' : 'var(--green)' }}>
+                    {Math.round((checkResult.userWageNormalizedDaily / checkResult.minimumDailyWage) * 100)}%
+                  </div>
+                </div>
+
+                <b style={{ color: checkResult.isUnderpaid ? '#ff453a' : 'var(--green)', fontSize: 14 }}>
+                  {checkResult.isUnderpaid ? 'Underpaid Rate' : 'Fair Pay Standard'}
+                </b>
+                <p style={{ fontSize: 11, color: 'var(--muted)', margin: '6px 0 12px' }}>
+                  Your estimated daily equivalent is <b>₹{checkResult.userWageNormalizedDaily}/day</b> vs. the state mandate of <b>₹{checkResult.minimumDailyWage}/day</b> ({checkResult.skillCategory} level).
+                </p>
+
+                {checkResult.isUnderpaid ? (
+                  <div className="alert-box danger" style={{ width: '100%' }}>
+                    <CircleHelp size={16}/>
+                    <div style={{ textAlign: 'left' }}>
+                      <b>Underpayment Flagged!</b>
+                      <p style={{ margin: '3px 0 0', fontSize: 10 }}>
+                        Your pay is below the statutory threshold by {Math.abs(checkResult.percentageDifference)}%. You can generate a dispute notice to ask for your correct wage.
+                      </p>
+                      <button className="outline-btn" style={{ height: 26, fontSize: 9, marginTop: 8, background: 'var(--card)' }} onClick={prefillDispute}>
+                        Use AI Dispute Assistant
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="alert-box success" style={{ width: '100%' }}>
+                    <Check size={16}/>
+                    <div style={{ textAlign: 'left' }}>
+                      <b>Wage Standards Met!</b>
+                      <p style={{ margin: '3px 0 0', fontSize: 10 }}>
+                        Your rate complies with state labor mandates. Save this record as part of your Livelihood Credit Profile.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Social Welfare Checklist */}
+          <section className="card profile-card">
+            <h3><BookOpen size={18}/> Social Security Safety Net</h3>
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>
+              Key government registrations and welfare benefits available to unorganized workers in India.
+            </p>
+
+            <div className="checklist-card">
+              <div className="checklist-item">
+                <Check size={16}/>
+                <div>
+                  <b>e-Shram National Card</b>
+                  <p style={{ margin: '3px 0 0', color: 'var(--muted)' }}>Provides a universal unorganized worker ID, linked to Rs. 2 lakh accidental insurance. Free registration.</p>
+                  <a href="https://eshram.gov.in/" target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 4, color: 'var(--purple)', fontWeight: 700, fontSize: 9 }}>Official Registration Portal &rarr;</a>
+                </div>
+              </div>
+
+              <div className="checklist-item">
+                <Check size={16}/>
+                <div>
+                  <b>BOCW Welfare Board (Construction/Masonry/Painting)</b>
+                  <p style={{ margin: '3px 0 0', color: 'var(--muted)' }}>Unlocks maternity assistance, education scholarships for children, tool-buying grants, and medical aid.</p>
+                  <span style={{ fontSize: 9, color: 'var(--muted)', display: 'block', marginTop: 4 }}>Requires 90 days of construction work in the last year verified by employer or union.</span>
+                </div>
+              </div>
+
+              <div className="checklist-item">
+                <Check size={16}/>
+                <div>
+                  <b>PMSBY accidental insurance (₹20/year)</b>
+                  <p style={{ margin: '3px 0 0', color: 'var(--muted)' }}>Linked directly to your bank account. High-priority benefit for heavy trade workers (carpentry, electrical, driving).</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Right Side: AI Wage Dispute Notice Generator */}
+        <div className="rights-side-panel" id="dispute-section">
+          <section className="card profile-card">
+            <h3><Sparkles size={18}/> AI Wage Dispute Assistant</h3>
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>
+              Struggling to collect your unpaid wages? Draft a formal, respectful, and legally sound payment request letter using AI.
+            </p>
+
+            <form onSubmit={handleDraftDispute} className="profile-form-grid">
+              <div className="profile-fields-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <label className="profile-label">EMPLOYER NAME
+                  <input className="profile-input" placeholder="e.g. Contractor Suresh Kumar" required value={disputeForm.employerName} onChange={e => setDisputeForm(f => ({ ...f, employerName: e.target.value }))}/>
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <label className="profile-label">START DATE OF WORK
+                    <input className="profile-input" type="date" required value={disputeForm.startDate} onChange={e => setDisputeForm(f => ({ ...f, startDate: e.target.value }))}/>
+                  </label>
+
+                  <label className="profile-label">END DATE
+                    <input className="profile-input" type="date" disabled={disputeForm.currentlyWorking} value={disputeForm.currentlyWorking ? '' : disputeForm.endDate} onChange={e => setDisputeForm(f => ({ ...f, endDate: e.target.value }))}/>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, cursor: 'pointer', fontSize: 9 }}>
+                      <input type="checkbox" checked={disputeForm.currentlyWorking} onChange={e => setDisputeForm(f => ({ ...f, currentlyWorking: e.target.checked }))}/>
+                      Still working here
+                    </label>
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <label className="profile-label">UNPAID AMOUNT (₹)
+                    <input className="profile-input" type="number" placeholder="e.g. 8500" required value={disputeForm.unpaidAmount} onChange={e => setDisputeForm(f => ({ ...f, unpaidAmount: e.target.value }))}/>
+                  </label>
+
+                  <label className="profile-label">EMPLOYER PHONE (OPTIONAL)
+                    <input className="profile-input" type="tel" placeholder="e.g. 9876543210" maxLength={10} value={disputeForm.employerPhone} onChange={e => setDisputeForm(f => ({ ...f, employerPhone: e.target.value }))}/>
+                  </label>
+                </div>
+
+                <label className="profile-label">LANGUAGE FOR MESSAGE
+                  <select className="profile-select" value={disputeForm.language} onChange={e => setDisputeForm(f => ({ ...f, language: e.target.value }))}>
+                    <option value="en">English (Professional Notice)</option>
+                    <option value="hi">Hindi / हिंदी (Devanagari Notice)</option>
+                  </select>
+                </label>
+
+                <label className="profile-label">WORK DETAILS & NOTES
+                  <textarea 
+                    className="profile-input" 
+                    style={{ height: 80, padding: '10px 12px', resize: 'vertical' }}
+                    placeholder="Describe what work you performed, why wages were withheld, or payment agreements made..."
+                    value={disputeForm.description}
+                    onChange={e => setDisputeForm(f => ({ ...f, description: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <button className="primary-btn full" disabled={drafting} style={{ marginTop: 8 }}>
+                {drafting ? <><Sparkles size={14}/> Drafting notice…</> : <><Sparkles size={14}/> Draft dispute notice</>}
+              </button>
+            </form>
+
+            {/* Generated Output */}
+            {draftedLetter && (
+              <div className="dispute-letter-box">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 6px' }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--muted)' }}>AI-GENERATED DRAFT</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="outline-btn" style={{ height: 26, fontSize: 9 }} onClick={copyToClipboard}>
+                      Copy Text
+                    </button>
+                    <button className="primary-btn" style={{ height: 26, fontSize: 9, background: '#25D366', color: 'white', border: 0 }} onClick={sendWhatsApp}>
+                      Send via WhatsApp
+                    </button>
+                  </div>
+                </div>
+
+                <div className="whatsapp-bubble">
+                  {draftedLetter}
+                </div>
+                
+                <small style={{ fontSize: 8, color: 'var(--muted)', display: 'block', textAlign: 'center' }}>
+                  Verify that bank details and dates are accurate before sending to your employer.
+                </small>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default App;

@@ -72,3 +72,39 @@ export async function publicPassport(req, res, next) {
     return res.json(passport);
   } catch (error) { return next(error); }
 }
+
+export async function getCreditProfile(req, res, next) {
+  try {
+    const snapshot = await buildSnapshot(req.user.sub);
+    return res.json({
+      profile: snapshot.profile,
+      income: snapshot.income,
+      scores: snapshot.scores,
+      generatedAt: new Date()
+    });
+  } catch (error) { return next(error); }
+}
+
+export async function downloadCreditProfile(req, res, next) {
+  try {
+    const snapshot = await buildSnapshot(req.user.sub);
+    const lines = [
+      'SHRAMIK LENS - LIVELIHOOD CREDIT STATEMENT',
+      `Name: ${snapshot.profile.user.name}`,
+      `Worker ID: ${snapshot.profile.publicId || 'Not generated'}`,
+      `Occupation: ${snapshot.profile.occupation || 'Not provided'}`,
+      `Financial Readiness Score: ${snapshot.scores.financialReadiness.score}/100`,
+      `Readiness Rating: ${snapshot.scores.financialReadiness.category}`,
+      `6-Month Total Earnings: INR ${snapshot.income.sixMonthTotal.toLocaleString('en-IN')}`,
+      `Current Month Income: INR ${snapshot.income.monthlyIncome.toLocaleString('en-IN')}`,
+      `Verified Work Transactions: ${snapshot.scores.counts?.verifiedTransactions || 0}`,
+      `Verified Employers: ${snapshot.scores.counts?.verifiedEmployers || 0}`,
+      `Verified Supporting Documents: ${snapshot.scores.counts?.verifiedDocuments || 0}`,
+      `Verify Online: ${req.protocol}://${req.get('host')}/api/public/passport/${snapshot.profile.publicId || ''}`,
+      'This statement is generated from verified transaction ledger entries.',
+    ];
+    const pdf = simplePdf(lines);
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="credit-profile.pdf"' });
+    return res.send(pdf);
+  } catch (error) { return next(error); }
+}

@@ -405,3 +405,200 @@ button,input,select{font:inherit}button{cursor:pointer;color:inherit}svg{stroke-
     position: static;
   }
 }
+
+/* Rights Page & Premium Tools */
+.rights-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr);
+  gap: 20px;
+}
+.rights-side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rights-gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  background: var(--card2);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  margin-top: 16px;
+}
+.gauge-visual {
+  width: 140px;
+  height: 70px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.gauge-arc {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 14px solid var(--line);
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+  transform: rotate(-135deg);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.gauge-fill {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 14px solid var(--purple);
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: center;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gauge-text {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+.whatsapp-bubble {
+  background: #e7fed9;
+  border: 1px solid #c2edab;
+  color: #123005;
+  border-radius: 12px 12px 0 12px;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 16px 0;
+}
+.dark .whatsapp-bubble {
+  background: #112d1b;
+  border-color: #214d2e;
+  color: #caeecb;
+}
+.dispute-letter-box {
+  margin-top: 12px;
+}
+.checklist-card {
+  padding: 20px;
+}
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+.checklist-item:first-of-type {
+  border-top: 0;
+}
+.checklist-item svg {
+  flex-shrink: 0;
+  color: var(--purple);
+  margin-top: 2px;
+}
+.alert-box {
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 11px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+.alert-box.danger {
+  background: #fff0f0;
+  border: 1px solid #ffd1d1;
+  color: #b33c36;
+}
+.alert-box.success {
+  background: #eefdf7;
+  border: 1px solid #ccefe0;
+  color: #0e8a67;
+}
+.dark .alert-box.danger {
+  background: #2a1615;
+  border-color: #4b221f;
+  color: #f79d97;
+}
+.dark .alert-box.success {
+  background: #0f241d;
+  border-color: #1b4435;
+  color: #a3eccd;
+}
+.speech-btn {
+  padding: 4px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 24px;
+  height: 24px;
+}
+.speech-btn:hover {
+  background: var(--line);
+  color: var(--text);
+}
+.speech-btn.active {
+  background: #ff453a;
+  color: white;
+  border-color: #ff453a;
+  animation: pulse-recording 1.2s infinite;
+}
+@keyframes pulse-recording {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); box-shadow: 0 0 0 4px rgba(255, 69, 58, 0.2); }
+  100% { transform: scale(1); }
+}
+
+@media(max-width: 800px) {
+  .rights-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Print Statement Optimization */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .app-shell, .assistant-scrim, .ai-fab, header, aside, .page-title, button {
+    display: none !important;
+  }
+  .printable-statement {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+  }
+  .printable-statement * {
+    color: black !important;
+  }
+}
+
+

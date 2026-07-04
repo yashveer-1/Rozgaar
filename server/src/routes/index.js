@@ -14,6 +14,7 @@ import { schemeRoutes } from './schemeRoutes.js';
 import { notificationRoutes } from './notificationRoutes.js';
 import { passportRoutes } from './passportRoutes.js';
 import { verificationRoutes } from './verificationRoutes.js';
+import { rightsRoutes } from './rightsRoutes.js';
 
 export const api = Router();
 api.post('/auth/register', register);
@@ -29,6 +30,7 @@ api.use('/schemes', schemeRoutes);
 api.use('/notifications', notificationRoutes);
 api.use('/passport', passportRoutes);
 api.use('/verification', verificationRoutes);
+api.use('/rights', rightsRoutes);
 
 api.get('/dashboard', authenticate, authorize('worker'), getDashboard);
 api.get('/applications/me', authenticate, authorize('worker'), myApplications);
