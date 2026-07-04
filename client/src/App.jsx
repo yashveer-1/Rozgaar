@@ -736,15 +736,199 @@ function Documents() {
 
 function Jobs() {
   const [applied,setApplied]=useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [applicantPhone, setApplicantPhone] = useState('');
+  
   const queryClient=useQueryClient();
   const {data:jobs=[],isLoading,error}=useQuery({queryKey:['jobs'],queryFn:()=>apiFetch('/jobs')});
-  const apply=useMutation({mutationFn:id=>apiFetch(`/jobs/${id}/apply`,{method:'POST'}),onSuccess:(_result,id)=>{setApplied(list=>[...list,id]);queryClient.invalidateQueries({queryKey:['dashboard']});toast.success('Application sent successfully');},onError:e=>toast.error(e.message)});
+  const {data:profile}=useQuery({queryKey:['worker-profile'],queryFn:()=>apiFetch('/workers/me')});
+  
+  const apply=useMutation({
+    mutationFn:id=>apiFetch(`/jobs/${id}/apply`,{method:'POST'}),
+    onSuccess:(_result,id)=>{
+      setApplied(list=>[...list,id]);
+      queryClient.invalidateQueries({queryKey:['dashboard']});
+      toast.success('Application logged on Shramik Lens portal');
+      setSelectedJob(null);
+    },
+    onError:e=>toast.error(e.message)
+  });
+
+  useEffect(() => {
+    if (selectedJob && profile) {
+      const skillsList = (profile.skills || []).filter(s => s.verified).map(s => s.name).join(', ') || 'General Trade';
+      const passportUrl = `${window.location.origin}/api/public/passport/${profile.publicId || ''}`;
+      
+      setCoverLetter(`Namaste,
+
+I am writing to apply for the "${selectedJob.title}" position at "${selectedJob.employer?.name || 'your company'}". 
+
+Here are my verified details from my Shramik Lens Passport:
+- Candidate Name: ${profile.user?.name || 'Worker'}
+- Occupation: ${profile.occupation || 'Artisan'}
+- Experience: ${profile.experienceYears || 0} years
+- Verified Core Skills: ${skillsList}
+- Contact Number: ${profile.phone || 'Provided upon request'}
+- Verified Livelihood Passport: ${passportUrl}
+
+I look forward to discussing how my experience fits your requirements.
+
+Thank you,
+${profile.user?.name || 'Worker'}`);
+      setApplicantPhone(profile.phone || '');
+    }
+  }, [selectedJob, profile]);
+
+  const sendWhatsAppApplication = () => {
+    if (!coverLetter || !selectedJob) return;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(coverLetter)}`;
+    window.open(url, '_blank');
+    apply.mutate(selectedJob._id); // Log the application to portal
+  };
+
+  const copyApplicationText = () => {
+    if (!coverLetter) return;
+    navigator.clipboard.writeText(coverLetter);
+    toast.success('Application text copied to clipboard');
+  };
+
   if(isLoading)return <LoadingState text="Matching jobs to your profile…"/>;
   if(error)return <ErrorState error={error}/>;
-  return <motion.div {...fade}><PageTitle eyebrow="AI-RANKED OPPORTUNITIES" title={<>Work that fits <span>you.</span></>} text="Matched using your verified skills, experience, location and preferences." action={<button className="outline-btn"><SlidersIcon/> Match preferences</button>}/>
-    <div className="filter-row"><button className="active">All matches <span>{jobs.length}</span></button><button>Near me</button><button>Full-time</button><button>Contract</button><div/><select><option>Best match first</option><option>Highest pay</option></select></div>
-    <div className="jobs-page">{jobs.length?jobs.map(job=><motion.article className="card job-card" key={job._id} whileHover={{y:-3}}><div className="job-card-top"><div className="company-logo large">{job.employer?.name?.[0]||job.title[0]}</div><span className="match-pill"><Sparkles/>{job.matchScore||0}% match</span><button className="icon-btn"><Star/></button></div><h3>{job.title}</h3><p>{job.employer?.name||'Verified employer'} <BadgeCheck/></p><div className="job-meta"><span><MapPin/>{job.location?.remote?'Remote':`${job.location?.city||''}, ${job.location?.state||''}`}</span><span><IndianRupee/>{formatPay(job.pay)}</span><span><CalendarDays/>{job.type}</span></div><div className="skill-tags">{job.skills?.slice(0,3).map(skill=><span key={skill}>{skill}</span>)}</div><div className="why"><Zap/><span><b>Why it fits:</b> Calculated from skills, location, experience and expected salary</span></div><button disabled={applied.includes(job._id)||apply.isPending} className="primary-btn full" onClick={()=>apply.mutate(job._id)}>{applied.includes(job._id)?<><Check/> Applied</>:<>View & apply <ArrowRight/></>}</button></motion.article>):<EmptyState text="No open jobs are available yet."/>}</div>
-  </motion.div>;
+  
+  return (
+    <motion.div {...fade}>
+      <PageTitle eyebrow="AI-RANKED OPPORTUNITIES" title={<>Work that fits <span>you.</span></>} text="Matched using your verified skills, experience, location and preferences." action={<button className="outline-btn"><SlidersIcon/> Match preferences</button>}/>
+      
+      <div className="filter-row">
+        <button className="active">All matches <span>{jobs.length}</span></button>
+        <button>Near me</button>
+        <button>Full-time</button>
+        <button>Contract</button>
+        <div/>
+        <select><option>Best match first</option><option>Highest pay</option></select>
+      </div>
+
+      <div className="jobs-page">
+        {jobs.length ? jobs.map(job => (
+          <motion.article className="card job-card" key={job._id} whileHover={{y:-3}}>
+            <div className="job-card-top">
+              <div className="company-logo large">{job.employer?.name?.[0]||job.title[0]}</div>
+              <span className="match-pill"><Sparkles/>{job.matchScore||0}% match</span>
+              <button className="icon-btn"><Star/></button>
+            </div>
+            <h3>{job.title}</h3>
+            <p>{job.employer?.name||'Verified employer'} <BadgeCheck/></p>
+            <div className="job-meta">
+              <span><MapPin/>{job.location?.remote?'Remote':`${job.location?.city||''}, ${job.location?.state||''}`}</span>
+              <span><IndianRupee/>{formatPay(job.pay)}</span>
+              <span><CalendarDays/>{job.type}</span>
+            </div>
+            <div className="skill-tags">
+              {job.skills?.slice(0,3).map(skill=><span key={skill}>{skill}</span>)}
+            </div>
+            <div className="why">
+              <Zap/>
+              <span><b>Why it fits:</b> Matches your declared experience ({profile?.experienceYears || 0} years) and ${profile?.occupation || 'trade'} occupation.</span>
+            </div>
+            <button 
+              disabled={applied.includes(job._id)} 
+              className="primary-btn full" 
+              onClick={() => setSelectedJob(job)}
+            >
+              {applied.includes(job._id) ? <><Check/> Applied</> : <>View & apply <ArrowRight/></>}
+            </button>
+          </motion.article>
+        )) : <EmptyState text="No open jobs are available yet."/>}
+      </div>
+
+      {/* External Portals Integration */}
+      {profile && (
+        <section className="card" style={{ padding: 20, marginTop: 24 }}>
+          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700 }}><BriefcaseBusiness size={18} style={{ color: 'var(--purple)', display: 'inline', marginRight: 8, verticalAlign: 'middle' }}/> Explore External Job Platforms</h3>
+          <p style={{ fontSize: 9, color: 'var(--muted)', marginTop: 4 }}>Find more job postings in real-time on major platforms pre-filtered for your trade and location.</p>
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+            <a className="outline-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center' }} 
+               href={`https://in.indeed.com/jobs?q=${encodeURIComponent(profile.occupation || 'Jobs')}&l=${encodeURIComponent(profile.location?.city || '')}`} 
+               target="_blank" rel="noreferrer">
+               Search Indeed &rarr;
+            </a>
+            <a className="outline-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center' }} 
+               href={`https://www.naukri.com/${encodeURIComponent((profile.occupation || '').toLowerCase())}-jobs-in-${encodeURIComponent((profile.location?.city || '').toLowerCase())}`} 
+               target="_blank" rel="noreferrer">
+               Search Naukri &rarr;
+            </a>
+            <a className="outline-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center' }} 
+               href={`https://www.apna.co/jobs?search=${encodeURIComponent(profile.occupation || '')}&location=${encodeURIComponent(profile.location?.city || '')}`} 
+               target="_blank" rel="noreferrer">
+               Search Apna &rarr;
+            </a>
+            <a className="outline-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center' }} 
+               href={`https://www.workindia.in/jobs-in-${encodeURIComponent((profile.location?.city || '').toLowerCase())}/`} 
+               target="_blank" rel="noreferrer">
+               Search WorkIndia &rarr;
+            </a>
+          </div>
+        </section>
+      )}
+
+      {/* Application Popup Modal */}
+      <AnimatePresence>
+        {selectedJob && (
+          <>
+            <motion.div className="assistant-scrim" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setSelectedJob(null)}/>
+            <motion.div
+              initial={{ opacity:0, y:60 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:60 }}
+              transition={{ type:'spring', damping:28 }}
+              style={{
+                position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)',
+                width:'min(560px, 100vw)', background:'var(--card)', borderRadius:'20px 20px 0 0',
+                padding:'28px 24px 32px', zIndex:1100, boxShadow:'0 -8px 40px rgba(0,0,0,0.35)',
+                maxHeight: '85vh', overflowY: 'auto'
+              }}
+            >
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <div>
+                  <small style={{ fontSize: 9, color: 'var(--muted)', letterSpacing: 0.5 }}>APPLYING FOR ROLE</small>
+                  <b style={{ fontSize:15, display: 'block', marginTop: 2 }}>{selectedJob.title}</b>
+                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>{selectedJob.employer?.name || 'Verified Employer'}</span>
+                </div>
+                <button className="icon-btn" onClick={() => setSelectedJob(null)}><X size={18}/></button>
+              </div>
+
+              <div className="profile-form-grid" style={{ marginBottom: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <label className="profile-label">CANDIDATE NAME
+                    <input className="profile-input" disabled value={profile?.user?.name || ''}/>
+                  </label>
+                  <label className="profile-label">CONTACT NUMBER
+                    <input className="profile-input" type="tel" value={applicantPhone} onChange={e => setApplicantPhone(e.target.value)}/>
+                  </label>
+                </div>
+
+                <label className="profile-label">AUTO-GENERATED COVER LETTER
+                  <textarea 
+                    className="profile-input" 
+                    style={{ height: 160, padding: '10px 12px', resize: 'vertical', fontFamily: 'monospace', fontSize: 10, lineHeight: 1.4 }}
+                    value={coverLetter}
+                    onChange={e => setCoverLetter(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="outline-btn" style={{ flex: 1 }} onClick={copyApplicationText}>Copy Application</button>
+                <button className="primary-btn" style={{ flex: 1.5, background: '#25D366', color: 'white', border: 0 }} onClick={sendWhatsAppApplication}>
+                  Send via WhatsApp
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
 }
 function SlidersIcon(){return <Target size={17}/>}
 
@@ -1399,6 +1583,7 @@ function Assistant({ open, close }) {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState(null);
+  const [language, setLanguage] = useState('hinglish');
   
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -1434,7 +1619,7 @@ function Assistant({ open, close }) {
     try {
       const res = await apiFetch('/ai/chat', {
         method: 'POST',
-        body: JSON.stringify({ request: q }),
+        body: JSON.stringify({ request: q, language }),
       });
       const text =
         res?.answer ||
@@ -1466,13 +1651,19 @@ function Assistant({ open, close }) {
       setRecording(false);
     } else {
       const rec = new SpeechRecognition();
-      rec.lang = 'hi-IN'; // Supports Hindi + English mixed naturally
+      if (language === 'hindi') {
+        rec.lang = 'hi-IN';
+      } else if (language === 'hinglish') {
+        rec.lang = 'hi-IN';
+      } else {
+        rec.lang = 'en-IN';
+      }
       rec.continuous = false;
       rec.interimResults = false;
 
       rec.onstart = () => {
         setRecording(true);
-        toast.info('Listening… Speak now in Hindi or English.');
+        toast.info(`Listening… Speak now in ${language}.`);
       };
 
       rec.onresult = (event) => {
@@ -1512,10 +1703,14 @@ function Assistant({ open, close }) {
       window.speechSynthesis.cancel(); // Stop current speech
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Select Indian English/Hindi voice if available
       const voices = window.speechSynthesis.getVoices();
-      const indianVoice = voices.find(v => v.lang.includes('IN') || v.lang.includes('hi'));
-      if (indianVoice) utterance.voice = indianVoice;
+      let selectedVoice = null;
+      if (language === 'hindi' || language === 'hinglish') {
+        selectedVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('IN'));
+      } else {
+        selectedVoice = voices.find(v => v.lang.includes('en'));
+      }
+      if (selectedVoice) utterance.voice = selectedVoice;
 
       utterance.onend = () => setSpeakingIdx(null);
       utterance.onerror = () => setSpeakingIdx(null);
@@ -1552,6 +1747,30 @@ function Assistant({ open, close }) {
                 </div>
               </div>
               <button className="icon-btn" onClick={close}><X/></button>
+            </div>
+
+            {/* Language Selector pills */}
+            <div style={{ display: 'flex', gap: 6, padding: '10px 18px', borderBottom: '1px solid var(--line)', background: 'var(--card2)', flexShrink: 0 }}>
+              <span style={{ fontSize: 9, color: 'var(--muted)', margin: 'auto 6px auto 0', fontWeight: 700 }}>LANGUAGE:</span>
+              {['english', 'hindi', 'hinglish'].map(l => (
+                <button 
+                  key={l}
+                  onClick={() => setLanguage(l)}
+                  style={{
+                    border: '1px solid var(--line)',
+                    background: language === l ? 'var(--purple)' : 'var(--card)',
+                    color: language === l ? 'white' : 'var(--text)',
+                    borderRadius: 12,
+                    padding: '4px 10px',
+                    fontSize: 8,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
 
             {/* Messages */}

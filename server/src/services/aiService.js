@@ -1,9 +1,19 @@
 const endpoint =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-const SYSTEM_CONTEXT = `You are Lens AI, a helpful livelihood assistant for Indian informal workers on the Shramik Lens platform.
+function getSystemContext(lang) {
+  let instruction = "Answer in English.";
+  if (lang === 'hi' || lang === 'hindi') {
+    instruction = "You MUST respond in Hindi (Devanagari script) only.";
+  } else if (lang === 'hinglish') {
+    instruction = "You MUST respond in Hinglish (mixed Hindi and English words using Latin/English script) only. E.g. 'Namaste! Aap PM Vishwakarma scheme ke liye eligible hain.'";
+  } else if (lang === 'en' || lang === 'english') {
+    instruction = "You MUST respond in English only.";
+  }
+  return `You are Lens AI, a helpful livelihood assistant for Indian informal workers on the Shramik Lens platform.
 You have access to the worker's profile, income, and skill data. Be concise, warm, and practical.
-Answer in the same language the user asks in (English or Hindi).`;
+${instruction}`;
+}
 
 function getMockAIResponse(task, data) {
   const isChat = task === 'chat';
@@ -13,40 +23,110 @@ function getMockAIResponse(task, data) {
   const workerName = userObj.name || profile.name || 'Worker';
   const occupation = profile.occupation || 'Tailoring';
   const skills = (profile.skills || []).map(s => s.name).join(', ') || 'Tailoring';
+  
+  const selectedLang = data?.context?.language || 'en';
+  const isHindi = selectedLang === 'hi' || selectedLang === 'hindi';
+  const isHinglish = selectedLang === 'hinglish';
 
   if (isChat) {
     const q = userRequest.toLowerCase();
-    let answer = `Namaste! I am Lens AI (running in local simulator mode). As a specialized assistant for informal workers, I can help you understand your alternative credit profile, rights, and job matches.`;
     
+    // Default Greetings
+    let answer = `Namaste! I am Lens AI (running in local simulator mode). As a specialized assistant for informal workers, I can help you understand your alternative credit profile, rights, and job matches.`;
+    if (isHindi) {
+      answer = `नमस्ते! मैं लेंस एआई हूँ (सिम्युलेटर मोड)। अनौपचारिक श्रमिकों के लिए एक विशेष सहायक के रूप में, मैं आपकी क्रेडिट प्रोफ़ाइल, अधिकारों और नौकरी के मैचों को समझने में आपकी मदद कर सकता हूँ।`;
+    } else if (isHinglish) {
+      answer = `Namaste! Main Lens AI hoon (local simulator mode). Informal workers ke liye ek special assistant ke roop mein, main aapki credit profile, legal rights aur job matches samajhne mein help kar sakta hoon.`;
+    }
+    
+    // Scheme Queries
     if (q.includes('scheme') || q.includes('yojana') || q.includes('eligib')) {
-      answer = `Based on your profile as a ${occupation} professional with skills in ${skills || 'your trade'}, you are eligible for:
+      if (isHindi) {
+        answer = `आपके ${occupation} प्रोफ़ाइल और ${skills || 'कौशल'} के आधार पर, आप इन सरकारी योजनाओं के लिए पात्र हैं:
+1. **पीएम विश्वकर्मा योजना**: ₹15,000 टूलकिट प्रोत्साहन + 5% ब्याज पर आसान व्यवसाय ऋण।
+2. **प्रधानमंत्री सुरक्षा बीमा योजना (PMSBY)**: केवल ₹20/वर्ष में ₹2 लाख का दुर्घटना बीमा।
+3. **प्रधानमंत्री श्रम योगी मानधन**: 60 वर्ष की आयु के बाद ₹3,000 मासिक पेंशन।
+आप इन्हें सीधे 'Govt. Schemes' टैब में देख और आवेदन कर सकते हैं!`;
+      } else if (isHinglish) {
+        answer = `Aapke ${occupation} profile aur ${skills || 'skills'} ke hisab se, aap in government schemes ke liye eligible hain:
+1. **PM Vishwakarma Scheme**: ₹15,000 toolkit incentive + 5% interest par low-interest business loans.
+2. **PMSBY (Suraksha Bima Yojana)**: Sirf ₹20/year mein ₹2 Lakh ka accident insurance cover.
+3. **PM Shram Yogi Maandhan**: Age 60 ke baad ₹3,000 monthly guaranteed pension.
+Aap directly 'Govt. Schemes' tab mein jaakar apply kar sakte hain!`;
+      } else {
+        answer = `Based on your profile as a ${occupation} professional with skills in ${skills || 'your trade'}, you are eligible for:
 1. **PM Vishwakarma Scheme**: Toolkit incentive of ₹15,000 + low-interest enterprise loans.
 2. **PMSBY (Pradhan Mantri Suraksha Bima Yojana)**: ₹2 Lakh accidental insurance for just ₹20/year.
 3. **PM Shram Yogi Maandhan**: Monthly pension of ₹3,000 after age 60.
 You can view and apply for these directly in the 'Govt. Schemes' tab!`;
-    } else if (q.includes('income') || q.includes('earn') || q.includes('kamai') || q.includes('trend')) {
-      answer = `Looking at your income insights:
+      }
+    } 
+    // Income Queries
+    else if (q.includes('income') || q.includes('earn') || q.includes('kamai') || q.includes('trend')) {
+      if (isHindi) {
+        answer = `आपके आय विश्लेषण को देखते हुए:
+- आपका सत्यापित लेनदेन इतिहास सक्रिय है।
+- आपकी महीने-दर-महीने की वृद्धि एक स्थिर पैटर्न दर्शाती है।
+- भुगतान के स्क्रीनशॉट के साथ अपने दस्तावेज़ वॉल्ट को अपडेट रखने से आपकी क्रेडिट रेटिंग मजबूत रहेगी।`;
+      } else if (isHinglish) {
+        answer = `Aapke income insights ko dekhte hue:
+- Aapki verified transaction history active hai.
+- Month-on-month earnings growth kaafi steady hai.
+- Apne document vault mein payments ke screenshot upload karte rahein taaki alternative credit score strong bana rahe.`;
+      } else {
+        answer = `Looking at your income insights:
 - Your verified transaction history is active.
 - Your month-on-month growth indicates a steady pattern.
 - Keeping your document vault updated with recent payment screenshots will help maintain a strong Livelihood Credit rating.`;
-    } else if (q.includes('skill') || q.includes('career') || q.includes('growth')) {
-      answer = `To increase your earning potential in ${profile.location?.city || 'your area'}, I recommend:
+      }
+    } 
+    // Skills Queries
+    else if (q.includes('skill') || q.includes('career') || q.includes('growth')) {
+      if (isHindi) {
+        answer = `आपके क्षेत्र (${profile.location?.city || 'आपके क्षेत्र'}) में कमाई बढ़ाने के लिए मेरी सलाह है:
+1. **उन्नत प्रमाणपत्र** (जैसे राष्ट्रीय कौशल विकास प्रमाणपत्र)।
+2. **अतिरिक्त कौशल**: मशीन मरम्मत जैसे सहायक काम सीखें।
+इससे आपका जॉब मैच स्कोर और दैनिक मजदूरी 15-25% तक बढ़ सकती है।`;
+      } else if (isHinglish) {
+        answer = `Aapke city (${profile.location?.city || 'area'}) mein earning potential badhane ke liye tips:
+1. **Advanced Certification** (jaise National Skill Development Council ka certificate NCR).
+2. **Additional Skills**: Machine repair ya maintenance seekhein.
+Isse aapka job match score aur daily income 15-25% tak badh sakti hai.`;
+      } else {
+        answer = `To increase your earning potential in ${profile.location?.city || 'your area'}, I recommend:
 1. **Advanced Certification** (e.g. National Skill Development Certificate).
 2. **Expanding core skills**: Adding secondary skills like Basic Machine Repair.
 This can improve your job match score and expected daily rate by 15-25%.`;
-    } else if (q.includes('trust') || q.includes('readiness') || q.includes('score')) {
-      answer = `To improve your Trust Score and Financial Readiness rating:
+      }
+    } 
+    // Trust Score Queries
+    else if (q.includes('trust') || q.includes('readiness') || q.includes('score')) {
+      if (isHindi) {
+        answer = `अपने ट्रस्ट स्कोर और वित्तीय तैयारी रेटिंग में सुधार करने के लिए:
+1. कम से कम 2 सत्यापित भुगतान पर्ची या UPI स्क्रीनशॉट अपलोड करें।
+2. अनुभव की पुष्टि के लिए पूर्व नियोक्ताओं/ग्राहकों के संदर्भ जोड़ें।
+3. प्रोफाइल पेज में सभी विवरण (बैंक खाता, पता, शिक्षा) पूरा भरें।`;
+      } else if (isHinglish) {
+        answer = `Apna Trust Score aur Financial Readiness rating improve karne ke liye:
+1. Kam se kam 2 verified payment slips ya UPI screenshot upload karein.
+2. Purane employers ya clients ke recommendation references add karein.
+3. Profile page mein bank account, education aur complete address ki details fill karein.`;
+      } else {
+        answer = `To improve your Trust Score and Financial Readiness rating:
 1. Upload at least 2 verified payment slips or UPI screenshots.
 2. Add references (former employers/clients) to verify your experience.
 3. Complete all fields in your Profile page (bank account, address, education).`;
-    } else if (q.includes('to be sent by the worker') || q.includes('draft a professional') || q.includes('wage demand')) {
+      }
+    } 
+    // Wage Dispute Notices
+    else if (q.includes('to be sent by the worker') || q.includes('draft a professional') || q.includes('wage demand')) {
       const employerMatch = userRequest.match(/employer\s+([A-Za-z0-9\s]+)/i) || userRequest.match(/employerName:\s*([A-Za-z0-9\s]+)/i);
       const employer = employerMatch ? employerMatch[1].trim() : 'Employer';
       const amountMatch = userRequest.match(/Rs\.\s+([0-9,]+)/i) || userRequest.match(/unpaidAmount:\s*([0-9,]+)/i);
       const amount = amountMatch ? amountMatch[1] : '8,500';
-      const isHindi = q.includes('hindi') || q.includes('devanagari');
+      const isHindiDispute = q.includes('hindi') || q.includes('devanagari');
       
-      if (isHindi) {
+      if (isHindiDispute) {
         answer = `नमस्ते,
 यह संदेश मेरे बकाया काम के भुगतान के संबंध में है।
 
@@ -99,9 +179,10 @@ export async function askGemini(task, data) {
   const isChat = task === 'chat';
   const userRequest = data?.context?.request || task;
   const profile = data?.profile || data;
+  const selectedLang = data?.context?.language || 'en';
 
   const prompt = isChat
-    ? `${SYSTEM_CONTEXT}
+    ? `${getSystemContext(selectedLang)}
 
 Worker Profile (use this context to personalise your answer):
 ${JSON.stringify(profile, null, 2)}
